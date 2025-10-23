@@ -1,5 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-    // MODIFIED: Use relative path for socket connection
+    // --- *** FIX: Use relative path, not hardcoded URL *** ---
     const socket = io();
 
     window.gameState = {};
@@ -10,8 +10,19 @@ window.addEventListener('DOMContentLoaded', () => {
     let isInitialGameRender = true;
     let pauseCountdownInterval;
     let lobbyReturnInterval;
-    // REMOVED: Judgment-specific state
     
+    // --- *** NEW: Card SVG Filename Maps *** ---
+    const rankToFileMap = {
+        'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+        '10': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+        '5': '5', '4': '4', '3': '3', '2': '2'
+    };
+    const suitToFileMap = {
+        'Hearts': 'hearts', 'Spades': 'spades',
+        'Diamonds': 'diamonds', 'Clubs': 'clubs'
+    };
+    // --- *** END: Card Maps *** ---
+
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
         myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
@@ -19,14 +30,11 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('joinGame', { playerName: myPersistentPlayerName, playerId: myPersistentPlayerId });
         }
     });
-
-    // REMOVED: rankMap
     
     setupJoinScreenListeners();
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
-    // REMOVED: rearrange-hand-btn listener
 
     function setupJoinScreenListeners() {
         document.getElementById('join-game-btn').addEventListener('click', () => {
@@ -105,8 +113,6 @@ window.addEventListener('DOMContentLoaded', () => {
             isInitialGameRender = true;
         });
         
-        // REMOVED: Listeners for last-trick and confirm-bid modals
-
         // NEW: Listener for Pass Button
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
@@ -139,11 +145,11 @@ window.addEventListener('DOMContentLoaded', () => {
         
         // NEW: Listener for playing a card
         document.getElementById('my-hand').addEventListener('click', (e) => {
-            if (e.target.classList.contains('card')) {
-                // TODO: In Phase 2, get card data from the element
+            const cardEl = e.target.closest('.card');
+            if (cardEl) {
                 const cardData = { 
-                    suit: e.target.dataset.suit, 
-                    rank: e.target.dataset.rank 
+                    suit: cardEl.dataset.suit, 
+                    rank: cardEl.dataset.rank 
                 };
                 console.log('Clicked card:', cardData);
                 // socket.emit('playCard', cardData);
@@ -255,13 +261,18 @@ window.addEventListener('DOMContentLoaded', () => {
         players.forEach(p => {
             const li = document.createElement('li');
             let status = '';
-            if (!p.active) {
-                status = '<span class="player-status-badge reconnecting">(Offline)</span>';
-            } else if (p.isReady) {
-                status = '<span style="color: green;">✅ Ready</span>';
-            } else {
-                status = '<span style="color: #b00;">❌ Not Ready</span>';
+
+            // --- *** FIX: Only show status for non-hosts *** ---
+            if (!p.isHost) {
+                if (!p.active) {
+                    status = '<span class="player-status-badge reconnecting">(Offline)</span>';
+                } else if (p.isReady) {
+                    status = '<span style="color: green;">✅ Ready</span>';
+                } else {
+                    status = '<span style="color: #b00;">❌ Not Ready</span>';
+                }
             }
+            // --- *** END FIX *** ---
             
             li.innerHTML = `
                 <span>${p.isHost ? '👑' : ''} ${p.name} ${status}</span>
@@ -274,8 +285,9 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('player-lobby-actions').style.display = 'none';
             document.getElementById('host-lobby-actions').style.display = 'block';
             document.getElementById('host-message').style.display = 'none';
-            const allReady = players.every(p => p.isReady || !p.active);
-            document.getElementById('start-game-btn').disabled = !allReady;
+            // Host is always ready, so check other players
+            const allOthersReady = players.filter(p => !p.isHost).every(p => p.isReady || !p.active);
+            document.getElementById('start-game-btn').disabled = !allOthersReady;
         } else {
             document.getElementById('player-lobby-actions').style.display = 'block';
             document.getElementById('host-lobby-actions').style.display = 'none';
@@ -384,7 +396,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function showWarning(title, text) {
         document.getElementById('warning-modal-title').textContent = title;
         document.getElementById('warning-modal-text').textContent = text;
-        document.getElementById('warning-modal').classList.remove('hidden');
+        document.getElementById('warning-modal').classList.add('hidden');
     }
     
     // RETAINED: Scoreboard Rendering
@@ -400,7 +412,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const riverContainer = document.getElementById('river-container');
         // TODO: In Phase 2, this will be a complex function that renders
         // all 4 (or 8) layouts with overlapping cards.
-        riverContainer.innerHTML = '';
+        riverContainer.innerHTML = ''; // Clear old state
         
         // Placeholder text
         if (Object.keys(boardState).length === 0) {
@@ -433,21 +445,33 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- *** NEW: Implemented Card Rendering *** ---
     function createCardElement(card) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
-        // TODO: Add card data
-        // cardEl.dataset.suit = card.suit;
-        // cardEl.dataset.rank = card.rank;
-        // cardEl.innerHTML = `... card HTML ...`;
+        cardEl.dataset.suit = card.suit;
+        cardEl.dataset.rank = card.rank;
         
-        // Placeholder
-        cardEl.innerHTML = `${card.rank} ${card.suit}`;
-        cardEl.style.color = 'black'; // Temp
+        const suit_file = suitToFileMap[card.suit];
+        const rank_file = rankToFileMap[card.rank];
+        
+        if (suit_file && rank_file) {
+            const fileName = `${suit_file}_${rank_file}.svg`;
+            const cardImg = document.createElement('img');
+            cardImg.src = `assets/cards/${fileName}`;
+            cardImg.alt = `${card.rank} of ${card.suit}`;
+            // Prevent dragging image (interferes with card click)
+            cardImg.draggable = false;
+            cardEl.appendChild(cardImg);
+        } else {
+            // Fallback for placeholder cards
+            cardEl.innerHTML = `${card.rank} ${card.suit}`;
+            cardEl.style.color = 'black'; // Temp
+        }
         
         return cardEl;
     }
-    
+
     function updatePlayerActions(gs) {
         const passBtn = document.getElementById('pass-btn');
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
@@ -541,5 +565,5 @@ window.addEventListener('DOMContentLoaded', () => {
     makeDraggable(document.getElementById('afk-notification-modal'));
     makeDraggable(document.getElementById('confirm-hard-reset-modal'));
     makeDraggable(document.getElementById('warning-modal'));
-    // REMOVED: last-trick and confirm-bid modals
+    makeDraggable(document.getElementById('game-over-modal'));
 });
