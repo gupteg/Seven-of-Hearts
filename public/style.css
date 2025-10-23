@@ -1,0 +1,211 @@
+/* --- 3-COLUMN LAYOUT --- */
+#game-board { height: 100%; display: flex; gap: 15px; position: relative; }
+#left-column { flex: 5; display: flex; flex-direction: column; position: relative; overflow-y: auto; gap: 15px; } /* Added gap */
+#center-column { flex: 4; display: flex; flex-direction: column; background-color: var(--felt-green); border: 10px solid var(--teak-light); border-radius: 15px; padding: 15px; }
+#right-column { flex: 3; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
+#mobile-scroll-container { display: contents; } /* Behaves normally on desktop */
+#page-indicator { display: none; } /* Hidden on desktop */
+
+:root { --teak-dark: #4a2c2a; --teak-light: #8c5b4f; --felt-green: #004d25; --gold-accent: #daa520; --light-text: #f5f5dc; --parchment-bg: #D2B48C; --dark-text: #4a2c2a; --busted-red: #c70039; }
+body { font-family: 'Georgia', 'Times New Roman', Times, serif; background-color: var(--teak-dark); background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); padding: 15px; margin: 0; height: 100vh; box-sizing: border-box; overflow: hidden; color: var(--light-text); }
+h1, h2, h3 { color: var(--gold-accent); }
+
+/* --- RETAINED: Join & Lobby Screens --- */
+#join-screen, #lobby-screen { text-align: center; max-width: 500px; margin: 50px auto; padding: 20px; background-color: var(--teak-light); border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+#player-name-input, #host-password-input { font-size: 1.1em; padding: 10px; border-radius: 5px; border: 2px solid var(--teak-dark); width: 80%; }
+#player-list { list-style: none; padding: 0; }
+#player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
+.kick-btn { font-size: 0.8em; padding: 3px 7px; }
+/* --- END: Join & Lobby --- */
+
+/* --- NEW: Lobby Game Settings --- */
+.game-settings {
+    background: rgba(0,0,0,0.2);
+    padding: 10px;
+    border-radius: 5px;
+    margin: 15px 0;
+    text-align: left;
+}
+.setting-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+.setting-group label {
+    font-size: 1em;
+    color: var(--light-text);
+}
+.setting-group input[type="radio"] {
+    accent-color: var(--gold-accent);
+}
+/* --- END: Lobby Game Settings --- */
+
+
+/* --- RETAINED: Game Board & Player Slots --- */
+#player-slots-left, #player-slots-right { display: flex; flex-direction: column; gap: 10px; }
+#player-slots-top, #player-slots-bottom { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.player-slot { background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; padding: 10px; min-height: 80px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+.player-slot.active-player { border-color: var(--gold-accent); box-shadow: 0 0 15px var(--gold-accent); }
+.player-name { font-weight: bold; font-size: 1.1em; color: var(--light-text); }
+.player-status-badge { font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background-color: var(--busted-red); color: white; display: inline-block; margin-top: 5px; }
+.player-status-badge.reconnecting { background-color: #ff8c00; }
+.player-timer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3; }
+.afk-btn { position: absolute; top: 5px; right: 5px; font-size: 0.8em; padding: 2px 4px; }
+.player-card-count { font-size: 1.2em; font-weight: bold; margin-top: 5px; }
+/* --- END: Player Slots --- */
+
+/* --- NEW: River (Game Area) Styles --- */
+.river-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+.river-suit-zone {
+    /* Styles for 2-deck accordion later */
+    padding: 5px;
+    border-radius: 8px;
+}
+.river-layout {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    min-height: 90px; /* Adjust based on card size */
+    /* Overlapping card logic will go here */
+}
+/* --- END: River Styles --- */
+
+/* --- NEW: Game Log Ticker Styles --- */
+#game-log-ticker {
+    /* .info-tile styles are already applied */
+    flex-shrink: 0; /* Prevents it from shrinking */
+}
+#game-log-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+    font-size: 0.9em;
+    max-height: 120px; /* Show ~5-6 logs */
+    overflow-y: auto;
+    color: var(--light-text);
+}
+#game-log-list li {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(245, 245, 220, 0.2);
+}
+#game-log-list li:last-child {
+    border-bottom: none;
+}
+/* --- END: Game Log Styles --- */
+
+
+/* --- RETAINED: Hand & Card Styles --- */
+#player-hand-container { position: relative; }
+.hand { display: flex; justify-content: center; align-items: flex-end; padding: 10px; min-height: 120px; }
+.card { width: 70px; height: 100px; border: 1px solid #000; border-radius: 6px; background-color: white; color: black; position: relative; margin-left: -30px; box-shadow: -2px 0 5px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, z-index 0.2s ease, box-shadow 0.2s ease; }
+.card:first-child { margin-left: 0; }
+.card:hover { transform: translateY(-15px); z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+.card.playable-card { border: 3px solid var(--gold-accent); box-shadow: 0 0 20px var(--gold-accent); }
+/* ... (card rank/suit styles) ... */
+/* --- END: Hand & Card --- */
+
+/* --- NEW: Player Action Button Styles --- */
+#player-actions {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    z-index: 100;
+}
+.action-btn {
+    padding: 15px 25px;
+    font-size: 1.2em;
+    background-color: var(--gold-accent);
+    color: var(--teak-dark);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    font-family: 'Georgia', serif;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: background-color 0.2s ease;
+}
+.action-btn:hover {
+    background-color: #ffc400;
+}
+.action-btn:disabled {
+    background-color: #888;
+    color: #bbb;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+/* --- END: Player Actions --- */
+
+
+/* --- RETAINED: Banners & Info Tiles --- */
+#game-status-banner, #action-required-banner { padding: 15px; text-align: center; font-size: 1.1em; display: none; background-color: var(--parchment-bg); color: var(--dark-text); border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+#action-required-banner { background-color: var(--gold-accent); color: var(--teak-dark); font-weight: bold; }
+.info-tile { background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; padding: 15px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+.info-tile-btn { width: 100%; padding: 15px; font-size: 1.1em; background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; color: var(--light-text); font-family: 'Georgia', serif; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+.info-tile-btn:hover { background-color: var(--teak-dark); }
+/* --- END: Banners & Info --- */
+
+
+/* --- RETAINED: Modal Styles --- */
+.modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; }
+.modal.hidden { display: none; }
+.modal-content { background-color: var(--parchment-bg); color: var(--dark-text); margin: auto; padding: 20px; border: 5px solid var(--teak-light); border-radius: 15px; max-width: 90%; width: 500px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); position: relative; /* For Draggable */ }
+.modal-header { padding: 10px 0; border-bottom: 2px solid var(--teak-light); display: flex; justify-content: space-between; align-items: center; cursor: move; }
+.modal-header h2 { margin: 0; color: var(--teak-dark); }
+.close-btn { color: var(--teak-dark); font-size: 28px; font-weight: bold; cursor: pointer; }
+.close-btn:hover { color: #000; }
+.modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+/* --- END: Modals --- */
+
+
+/* --- RETAINED: Button Styles --- */
+button { font-family: 'Georgia', serif; font-size: 1em; padding: 10px 15px; border-radius: 5px; border: none; cursor: pointer; background-color: var(--gold-accent); color: var(--teak-dark); font-weight: bold; }
+button:hover { background-color: #ffc400; }
+.danger-btn { background-color: var(--busted-red); color: white; }
+.danger-btn:hover { background-color: #e04462; }
+.confirm-btn { background-color: #28a745; color: white; }
+.confirm-btn:hover { background-color: #218838; }
+/* --- END: Buttons --- */
+
+
+/* --- RETAINED: Scoreboard Styles --- */
+#scoreboard-content { max-height: 60vh; overflow-y: auto; }
+#scoreboard-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+#scoreboard-table th, #scoreboard-table td { border: 1px solid var(--teak-light); padding: 8px; text-align: center; }
+#scoreboard-table th { background-color: var(--teak-light); color: var(--light-text); }
+#scoreboard-table .total-score-row td { font-weight: bold; background-color: rgba(0,0,0,0.1); }
+#game-over-scoreboard { margin-top: 20px; }
+/* --- END: Scoreboard --- */
+
+
+/* --- RETAINED: Mobile Responsive Styles --- */
+@media (max-width: 850px) {
+    body { height: auto; min-height: 100vh; }
+    #game-board { flex-direction: column; height: 100%; }
+    #mobile-scroll-container { display: flex; width: 300%; overflow-x: scroll; scroll-snap-type: x mandatory; }
+    .game-column { width: 100%; flex-shrink: 0; scroll-snap-align: start; padding: 10px; box-sizing: border-box; }
+    #center-column { order: 0; }
+    #left-column { order: 1; }
+    #right-column { order: 2; }
+    
+    #player-hand-container { margin-top: 15px; }
+    .hand { min-height: 90px; }
+    .card { width: 55px; height: 80px; margin-left: -25px; }
+    
+    #page-indicator { display: flex; justify-content: center; gap: 10px; position: fixed; bottom: 10px; left: 0; right: 0; z-index: 100; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.4); transition: background-color 0.3s ease; }
+    .dot.active { background-color: white; }
+}
+/* --- END: Mobile --- */
