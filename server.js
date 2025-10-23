@@ -17,10 +17,11 @@ const reconnectTimers = {};
 const DISCONNECT_GRACE_PERIOD = 60000;
 let gameOverCleanupTimer = null;
 
-// --- NEW: Seven of Hearts Constants ---
+// --- Seven of Hearts Constants ---
+// Card ranks in display order
+const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']; 
 const SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
-const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-// --- END: Seven of Hearts Constants ---
+// --- END Constants ---
 
 // Centralized function to add logs to gameState
 function addLog(message) {
@@ -29,7 +30,51 @@ function addLog(message) {
     io.emit('updateGameState', gameState);
 }
 
-// --- NEW: Seven of Hearts Game Logic (Stubs) ---
+// --- NEW: Deck Creation Logic ---
+
+/**
+ * Creates one or more standard 52-card decks.
+ * @param {number} deckCount - The number of decks to create.
+ * @returns {Array} An array of card objects.
+ */
+function createDeck(deckCount) {
+    const deck = [];
+    for (let i = 0; i < deckCount; i++) {
+        for (const suit of SUITS) {
+            for (const rank of RANKS) {
+                deck.push({
+                    id: `${suit}-${rank}-${i}`, // Unique ID for 2-deck games
+                    suit: suit,
+                    rank: rank
+                });
+            }
+        }
+    }
+    return deck;
+}
+
+/**
+ * Shuffles a deck of cards in place using Fisher-Yates algorithm.
+ * @param {Array} deck - The deck of cards to shuffle.
+ */
+function shuffleDeck(deck) {
+    let m = deck.length, t, i;
+    // While there remain elements to shuffle…
+    while (m) {
+        // Pick a remaining element…
+        i = Math.floor(Math.random() * m--);
+        // And swap it with the current element.
+        t = deck[m];
+        deck[m] = deck[i];
+        deck[i] = t;
+    }
+}
+
+// --- UPDATED: Seven of Hearts Game Logic ---
+
+/**
+ * Creates the deck, deals, and starts the game.
+ */
 function initializeGame(readyPlayers, settings) {
     addLog('Initializing new game of Seven of Hearts...');
     
@@ -37,43 +82,65 @@ function initializeGame(readyPlayers, settings) {
         playerId: p.playerId,
         name: p.name,
         socketId: p.socketId,
-        isHost: p.isHost, // Carry over host status
+        isHost: p.isHost,
         status: 'Active',
         hand: [],
-        // TODO: Add score for multi-round games
     }));
 
-    // TODO: Phase 2
-    // 1. Create deck(s) based on settings.deckCount
-    // 2. Shuffle and deal all cards to gamePlayers
-    // 3. Find the player with the 7 of Hearts
-    // 4. Set that player's playerId as the currentPlayerId
+    // 1. Create and shuffle the deck(s)
+    addLog(`Creating ${settings.deckCount} deck(s)...`);
+    const deck = createDeck(settings.deckCount);
+    shuffleDeck(deck);
 
-    // Placeholder: Give first player the 7 of Hearts for testing
-    // gamePlayers[0].hand.push({ suit: 'Hearts', rank: '7' });
+    // 2. Deal all cards one by one
+    let playerIndex = 0;
+    while (deck.length > 0) {
+        gamePlayers[playerIndex].hand.push(deck.pop());
+        playerIndex = (playerIndex + 1) % gamePlayers.length;
+    }
 
-    const firstPlayerId = gamePlayers[0].playerId; // Placeholder
-    const firstPlayerName = gamePlayers[0].name; // Placeholder
+    // 3. Find the starting player (first player with a 7 of Hearts)
+    let startingPlayer = null;
+    let startingPlayerName = '';
+    
+    // We search in player order to find the *first* 7H in case of 2 decks
+    for (const player of gamePlayers) {
+        const hasSevenOfHearts = player.hand.some(card => card.suit === 'Hearts' && card.rank === '7');
+        if (hasSevenOfHearts) {
+            startingPlayer = player;
+            startingPlayerName = player.name;
+            break; 
+        }
+    }
+    
+    // Fallback (should never happen in a real game, but good for testing)
+    if (!startingPlayer) {
+        startingPlayer = gamePlayers[0];
+        startingPlayerName = gamePlayers[0].name;
+        addLog('WARNING: No 7 of Hearts found. Defaulting to host.');
+    }
 
+    // 4. Create the initial game state
     gameState = {
         players: gamePlayers,
-        boardState: {}, // Will hold the 'river' layouts
-        currentPlayerId: firstPlayerId,
+        boardState: {}, // The "River" is empty
+        currentPlayerId: startingPlayer.playerId,
         logHistory: ['Game initialized.'],
         settings: settings,
         isPaused: false,
         pausedForPlayerNames: [],
         pauseEndTime: null,
-        // ... other state
     };
 
     addLog(`Game started with ${settings.deckCount} deck(s).`);
     addLog(`Mode: ${settings.winCondition === 'first_out' ? 'First Player Out' : 'Play to 100 Points'}.`);
-    addLog(`Waiting for ${firstPlayerName} to play the 7 of Hearts.`);
+    addLog(`All cards dealt. Waiting for ${startingPlayerName} to play the 7 of Hearts.`);
     
     io.emit('gameStarted');
     io.emit('updateGameState', gameState);
 }
+// --- END: Updated Game Logic ---
+
 
 function handlePlayerRemoval(playerId) {
     if (!gameState) return;
@@ -83,19 +150,27 @@ function handlePlayerRemoval(playerId) {
         addLog(`Player ${playerToRemove.name} was removed after 60 seconds.`);
         delete reconnectTimers[playerId];
 
-        // Check if game should end
         const activePlayers = gameState.players.filter(p => p.status === 'Active');
         if (activePlayers.length < 2) {
             addLog('Not enough players. Ending game.');
             endSession();
         } else {
-            // Check for host transfer
             if (playerToRemove.isHost) {
                 const newHost = activePlayers[0];
                 if (newHost) {
                     newHost.isHost = true;
                     addLog(`${newHost.name} is the new host.`);
                 }
+            }
+            // If it was the removed player's turn, advance to the next active player
+            if (gameState.currentPlayerId === playerId) {
+                const removedPlayerIndex = gameState.players.indexOf(playerToRemove);
+                let nextPlayerIndex = (removedPlayerIndex + 1) % gameState.players.length;
+                while (gameState.players[nextPlayerIndex].status !== 'Active') {
+                    nextPlayerIndex = (nextPlayerIndex + 1) % gameState.players.length;
+                }
+                gameState.currentPlayerId = gameState.players[nextPlayerIndex].playerId;
+                addLog(`Turn passed to ${gameState.players[nextPlayerIndex].name}.`);
             }
         }
         io.emit('updateGameState', gameState);
@@ -120,7 +195,6 @@ function hardReset() {
     Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
     if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
 }
-// --- END: Seven of Hearts Game Logic ---
 
 
 // --- RETAINED: Lobby & Player Management Logic ---
@@ -166,7 +240,7 @@ io.on('connection', (socket) => {
                 name: playerName,
                 socketId: socket.id,
                 isHost: isHost,
-                isReady: isHost, // <-- *** FIX: Host is ready by default ***
+                isReady: isHost, // Host is ready by default
                 active: true
             };
             players.push(newPlayer);
@@ -212,24 +286,22 @@ io.on('connection', (socket) => {
         }
 
         const readyPlayers = players.filter(p => p.isReady && p.active);
-        // Ensure host is included, as they might be the only player (for testing)
-        // In production, we'll want a real player count check.
-        if (readyPlayers.length < 2) { // TODO: We can change this to 3 for a real game
+        
+        if (readyPlayers.length < 2) { // You can change this to 3+ for a real game
             socket.emit('warning', 'You need at least 2 ready players to start.');
             return;
         }
 
-        // Pass settings to new game initializer
         initializeGame(readyPlayers, settings);
     });
     
-    // --- NEW: Seven of Hearts Game Event Stubs ---
+    // --- (Stubs for Phase 3) ---
     socket.on('playCard', (card) => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
         if (player && player.playerId === gameState.currentPlayerId) {
             addLog(`${player.name} played a card (LOGIC TBD)`);
-            // TODO: Phase 2
+            // TODO: Phase 3
             // 1. Check if card is in player's hand
             // 2. Validate move (is it a 7? does it build on river?)
             // 3. Update gameState.boardState
@@ -246,14 +318,14 @@ io.on('connection', (socket) => {
         const player = gameState.players.find(p => p.socketId === socket.id);
         if (player && player.playerId === gameState.currentPlayerId) {
             addLog(`${player.name} passed (LOGIC TBD)`);
-            // TODO: Phase 2
+            // TODO: Phase 3
             // 1. Validate pass (check player's hand against boardState to ensure they have NO valid moves)
             // 2. If pass is valid, set next player's turn
             // 3. io.emit('updateGameState', gameState);
             // 4. If pass is invalid, emit warning to player.
         }
     });
-    // --- END: Seven of Hearts Stubs ---
+    // --- END: Stubs ---
 
     socket.on('markPlayerAFK', (playerIdToMark) => {
         if (!gameState) return;
@@ -311,7 +383,7 @@ io.on('connection', (socket) => {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) {
                 endSession();
-legacy            }
+            }
         }
     });
 
@@ -349,5 +421,4 @@ legacy            }
 // --- END: Retained Logic ---
 
 const PORT = process.env.PORT || 10000;
-// --- *** FIX: Added '0.0.0.0' for deployment health checks *** ---
 server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
