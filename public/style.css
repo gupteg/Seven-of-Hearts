@@ -109,13 +109,45 @@ h1, h2, h3 { color: var(--gold-accent); }
 
 /* --- RETAINED: Hand & Card Styles --- */
 #player-hand-container { position: relative; }
-.hand { display: flex; justify-content: center; align-items: flex-end; padding: 10px; min-height: 120px; }
-.card { width: 70px; height: 100px; border: 1px solid #000; border-radius: 6px; background-color: white; color: black; position: relative; margin-left: -30px; box-shadow: -2px 0 5px rgba(0,0,0,0.3); cursor: pointer; transition: transform 0.2s ease, z-index 0.2s ease, box-shadow 0.2s ease; }
+.hand { display: flex; justify-content: center; align-items: flex-end; padding: 10px; min-height: 140px; /* Increased height */ }
+
+/* --- FIX: New, proper card styles --- */
+.card {
+    width: 80px; /* Increased width */
+    height: 120px; /* Increased height */
+    border: 1px solid #777;
+    border-radius: 8px;
+    background-color: white;
+    color: black;
+    position: relative;
+    margin-left: -40px; /* Adjusted overlap */
+    box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease, z-index 0.2s ease, box-shadow 0.2s ease;
+    font-family: Arial, sans-serif; /* Use a clear font for cards */
+    font-weight: bold;
+    user-select: none; /* Prevent text selection */
+}
 .card:first-child { margin-left: 0; }
-.card:hover { transform: translateY(-15px); z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
-.card.playable-card { border: 3px solid var(--gold-accent); box-shadow: 0 0 20px var(--gold-accent); }
-/* ... (card rank/suit styles) ... */
+.card:hover { transform: translateY(-20px); z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
+
+/* Card colors */
+.card.red { color: #D90000; }
+.card.black { color: #333; }
+
+/* Card text and symbols */
+.card-rank { font-size: 1.8em; line-height: 1; }
+.card-rank.top { position: absolute; top: 8px; left: 8px; }
+.card-rank.bottom { position: absolute; bottom: 8px; right: 8px; transform: rotate(180deg); }
+.card-suit { font-size: 3.5em; text-align: center; line-height: 120px; /* Vertically center */ }
+
+/* Playable card highlight */
+.card.playable-card { 
+    border: 3px solid var(--gold-accent); 
+    box-shadow: 0 0 20px var(--gold-accent); 
+}
 /* --- END: Hand & Card --- */
+
 
 /* --- NEW: Player Action Button Styles --- */
 #player-actions {
@@ -201,8 +233,12 @@ button:hover { background-color: #ffc400; }
     #right-column { order: 2; }
     
     #player-hand-container { margin-top: 15px; }
-    .hand { min-height: 90px; }
-    .card { width: 55px; height: 80px; margin-left: -25px; }
+    .hand { min-height: 120px; } /* Adjusted for smaller cards */
+    .card { width: 60px; height: 90px; margin-left: -30px; }
+    .card-rank { font-size: 1.2em; }
+    .card-rank.top { top: 5px; left: 5px; }
+    .card-rank.bottom { bottom: 5px; right: 5px; }
+    .card-suit { font-size: 2.5em; line-height: 90px; }
     
     #page-indicator { display: flex; justify-content: center; gap: 10px; position: fixed; bottom: 10px; left: 0; right: 0; z-index: 100; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.4); transition: background-color 0.3s ease; }

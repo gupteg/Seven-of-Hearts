@@ -265,17 +265,22 @@ window.addEventListener('DOMContentLoaded', () => {
         playerList.innerHTML = '';
         players.forEach(p => {
             const li = document.createElement('li');
+            
+            // --- FIX: Correct host status logic ---
             let status = '';
-            if (!p.active) {
+            if (p.isHost) {
+                status = '👑'; // The status *is* the crown
+            } else if (!p.active) {
                 status = '<span class="player-status-badge reconnecting">(Offline)</span>';
             } else if (p.isReady) {
                 status = '<span style="color: green;">✅ Ready</span>';
             } else {
                 status = '<span style="color: #b00;">❌ Not Ready</span>';
             }
+            // --- END FIX ---
             
             li.innerHTML = `
-                <span>${p.isHost ? '👑' : ''} ${p.name} ${status}</span>
+                <span>${p.name} ${status}</span>
                 ${(me && me.isHost && p.playerId !== me.playerId) ? `<button class="kick-btn danger-btn" data-player-id="${p.playerId}">Kick</button>` : ''}
             `;
             playerList.appendChild(li);
@@ -454,20 +459,29 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+    // --- FIX: New, more robust card rendering function ---
     function createCardElement(card) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
-        // --- ADDED: Real data for Phase 2 ---
         cardEl.dataset.suit = card.suit;
         cardEl.dataset.rank = card.rank;
         
-        // This is a placeholder until we have SVGs
-        // We'll use the card-rendering logic from Judgment later
-        let color = (card.suit === 'Hearts' || card.suit === 'Diamonds') ? 'red' : 'black';
-        cardEl.innerHTML = `<span style="color:${color}; font-size: 1.2em; padding: 5px;">${card.rank} ${card.suit === 'Hearts' ? '♥' : card.suit === 'Spades' ? '♠' : card.suit === 'Diamonds' ? '♦' : '♣'}</span>`;
+        const suitSymbols = { 'Hearts': '♥', 'Spades': '♠', 'Diamonds': '♦', 'Clubs': '♣' };
+        const color = (card.suit === 'Hearts' || card.suit === 'Diamonds') ? 'red' : 'black';
+        
+        cardEl.classList.add(color); // Add 'red' or 'black' class for CSS
+        
+        // Create a structure that looks like a real card
+        cardEl.innerHTML = `
+            <div class="card-rank top">${card.rank}</div>
+            <div class="card-suit">${suitSymbols[card.suit]}</div>
+            <div class="card-rank bottom">${card.rank}</div>
+        `;
         
         return cardEl;
     }
+    // --- END FIX ---
+
     
     function updatePlayerActions(gs) {
         const passBtn = document.getElementById('pass-btn');
