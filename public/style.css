@@ -56,11 +56,11 @@ h1, h2, h3 { color: var(--gold-accent); }
 .player-card-count { font-size: 1.2em; font-weight: bold; margin-top: 5px; }
 /* --- END: Player Slots --- */
 
-/* --- NEW: River (Game Area) Styles --- */
+/* --- UPDATED: River (Game Area) Styles --- */
 .river-container {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px; /* Tighter gap */
     width: 100%;
     flex-grow: 1;
     overflow-y: auto;
@@ -69,8 +69,7 @@ h1, h2, h3 { color: var(--gold-accent); }
     border-radius: 8px;
 }
 .river-suit-zone {
-    /* Styles for 2-deck accordion later */
-    padding: 5px;
+    padding: 2px;
     border-radius: 8px;
 }
 .river-layout {
@@ -78,10 +77,59 @@ h1, h2, h3 { color: var(--gold-accent); }
     flex-direction: row;
     justify-content: center;
     align-items: center;
-    min-height: 90px; /* Adjust based on card size */
-    /* Overlapping card logic will go here */
+    min-height: 60px; /* Mini card height */
+    position: relative; /* For overlapping */
+}
+.card-placeholder {
+    font-size: 1.2em;
+    color: var(--light-text);
+    opacity: 0.4;
+    font-family: Arial, sans-serif;
+}
+/* Mini-card for the river */
+.card-mini {
+    width: 40px;
+    height: 55px;
+    background: #fff;
+    border: 1px solid #777;
+    border-radius: 4px;
+    margin-left: -32px; /* Overlap */
+    position: relative;
+    box-shadow: -1px 0 3px rgba(0,0,0,0.2);
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    user-select: none;
+}
+.card-mini.red { color: #D90000; }
+.card-mini.black { color: #333; }
+.card-mini.anchor-7 {
+    margin-left: 5px;
+    margin-right: 5px;
+    z-index: 10;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px var(--gold-accent);
+    border-color: var(--gold-accent);
+}
+/* Ensure first card in stack doesn't have overlap margin */
+.card-mini:first-child {
+    margin-left: 0;
+}
+.anchor-7 + .card-mini {
+    margin-left: -32px; /* Re-apply overlap after anchor */
+}
+.card-mini-rank {
+    font-size: 0.9em;
+    position: absolute;
+    top: 3px;
+    left: 4px;
+}
+.card-mini-suit {
+    font-size: 1.5em;
+    text-align: center;
+    line-height: 55px;
 }
 /* --- END: River Styles --- */
+
 
 /* --- NEW: Game Log Ticker Styles --- */
 #game-log-ticker {
@@ -145,6 +193,15 @@ h1, h2, h3 { color: var(--gold-accent); }
 .card.playable-card { 
     border: 3px solid var(--gold-accent); 
     box-shadow: 0 0 20px var(--gold-accent); 
+    cursor: pointer; /* Explicitly show pointer */
+}
+/* Make non-playable cards less prominent */
+.card:not(.playable-card) {
+    cursor: not-allowed;
+}
+.card:not(.playable-card):hover {
+    transform: none; /* Don't lift on hover if not playable */
+    z-index: 1;
 }
 /* --- END: Hand & Card --- */
 
@@ -167,7 +224,7 @@ h1, h2, h3 { color: var(--gold-accent); }
     font-weight: bold;
     font-family: 'Georgia', serif;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 .action-btn:hover {
     background-color: #ffc400;
@@ -177,6 +234,7 @@ h1, h2, h3 { color: var(--gold-accent); }
     color: #bbb;
     cursor: not-allowed;
     box-shadow: none;
+    opacity: 0.7;
 }
 /* --- END: Player Actions --- */
 
@@ -239,6 +297,13 @@ button:hover { background-color: #ffc400; }
     .card-rank.top { top: 5px; left: 5px; }
     .card-rank.bottom { bottom: 5px; right: 5px; }
     .card-suit { font-size: 2.5em; line-height: 90px; }
+    
+    /* Mini-card on mobile */
+    .card-mini { width: 30px; height: 45px; margin-left: -25px; border-radius: 3px; }
+    .card-mini.anchor-7 { margin-left: 3px; margin-right: 3px; }
+    .anchor-7 + .card-mini { margin-left: -25px; }
+    .card-mini-rank { font-size: 0.7em; top: 2px; left: 3px; }
+    .card-mini-suit { font-size: 1.2em; line-height: 45px; }
     
     #page-indicator { display: flex; justify-content: center; gap: 10px; position: fixed; bottom: 10px; left: 0; right: 0; z-index: 100; }
     .dot { width: 10px; height: 10px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.4); transition: background-color 0.3s ease; }

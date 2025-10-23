@@ -10,7 +10,11 @@ window.addEventListener('DOMContentLoaded', () => {
     let isInitialGameRender = true;
     let pauseCountdownInterval;
     let lobbyReturnInterval;
-    // REMOVED: Judgment-specific state
+    
+    // --- NEW: Client-side constants for sorting/logic ---
+    const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
+    const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+    // --- END: Constants ---
     
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
@@ -19,20 +23,16 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('joinGame', { playerName: myPersistentPlayerName, playerId: myPersistentPlayerId });
         }
     });
-
-    // REMOVED: rankMap
     
     setupJoinScreenListeners();
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
-    // REMOVED: rearrange-hand-btn listener
 
     function setupJoinScreenListeners() {
         document.getElementById('join-game-btn').addEventListener('click', () => {
             const playerName = document.getElementById('player-name-input').value;
             if (playerName.trim()) {
-                // MODIFIED: Save new keys
                 sessionStorage.setItem('sevenOfHeartsPlayerName', playerName);
                 socket.emit('joinGame', { playerName: playerName, playerId: myPersistentPlayerId });
             }
@@ -40,7 +40,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupLobbyEventListeners() {
-        // --- FIX: Reverted to Judgment's "Ready" logic ---
         document.getElementById('ready-btn').addEventListener('click', () => {
             socket.emit('setPlayerReady', true);
         });
@@ -48,7 +47,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
             
-            // NEW: Read game settings from the lobby modal
             const deckCount = document.querySelector('input[name="deck-count"]:checked').value;
             const winCondition = document.querySelector('input[name="win-condition"]:checked').value;
 
@@ -105,24 +103,19 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lobby-screen').style.display = 'block';
             isInitialGameRender = true;
         });
-        
-        // REMOVED: Listeners for last-trick and confirm-bid modals
 
-        // NEW: Listener for Pass Button
+        // --- UPDATED: Pass Button listener is now active ---
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
         });
         
-        // NEW: Listener for Game Log Ticker
         document.getElementById('game-log-ticker').addEventListener('click', () => {
-            // TODO: Open full game log modal
             console.log('Open full log modal requested');
             showWarning('Alert', 'Full game log modal not yet implemented.');
         });
     }
 
     function setupDynamicEventListeners() {
-        // RETAINED: Listener for Kick buttons
         document.getElementById('player-list').addEventListener('click', (e) => {
             if (e.target.classList.contains('kick-btn')) {
                 const playerIdToKick = e.target.dataset.playerId;
@@ -130,7 +123,6 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // RETAINED: Listener for AFK buttons
         document.getElementById('game-board').addEventListener('click', (e) => {
              if (e.target.classList.contains('afk-btn')) {
                 const playerIdToMark = e.target.dataset.playerId;
@@ -138,24 +130,19 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // NEW: Listener for playing a card
+        // --- UPDATED: Card click listener is now active ---
         document.getElementById('my-hand').addEventListener('click', (e) => {
             const cardEl = e.target.closest('.card');
-            if (cardEl) {
-                // This is where we will emit the playCard event in Phase 2
-                // For now, it just proves the click is registered.
-                console.log('Clicked card with data:', cardEl.dataset.suit, cardEl.dataset.rank);
-                
-                // Example of what's to come (do not uncomment yet)
-                // const cardData = { 
-                //     suit: cardEl.dataset.suit, 
-                //     rank: cardEl.dataset.rank 
-                // };
-                // socket.emit('playCard', cardData);
+            if (cardEl && cardEl.classList.contains('playable-card')) {
+                const cardData = { 
+                    suit: cardEl.dataset.suit, 
+                    rank: cardEl.dataset.rank,
+                    id: cardEl.dataset.id // Send unique ID
+                };
+                socket.emit('playCard', cardData);
             }
         });
         
-        // RETAINED: Mobile scroll snap
         const scrollContainer = document.getElementById('mobile-scroll-container');
         const dots = document.querySelectorAll('.dot');
         if (scrollContainer && dots.length) {
@@ -256,7 +243,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const playerList = document.getElementById('player-list');
         const me = players.find(p => p.playerId === myPersistentPlayerId);
         
-        // --- FIX: Added guard clause from original Judgment code ---
         if (!me) { 
             playerList.innerHTML = '<p>Joining...</p>';
             return; 
@@ -266,10 +252,9 @@ window.addEventListener('DOMContentLoaded', () => {
         players.forEach(p => {
             const li = document.createElement('li');
             
-            // --- FIX: Correct host status logic ---
             let status = '';
             if (p.isHost) {
-                status = '👑'; // The status *is* the crown
+                status = '👑';
             } else if (!p.active) {
                 status = '<span class="player-status-badge reconnecting">(Offline)</span>';
             } else if (p.isReady) {
@@ -277,7 +262,6 @@ window.addEventListener('DOMContentLoaded', () => {
             } else {
                 status = '<span style="color: #b00;">❌ Not Ready</span>';
             }
-            // --- END FIX ---
             
             li.innerHTML = `
                 <span>${p.name} ${status}</span>
@@ -291,7 +275,6 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('host-lobby-actions').style.display = 'block';
             document.getElementById('host-message').style.display = 'none';
             
-            // Host is always "ready", check others
             const allOthersReady = players.filter(p => p.playerId !== me.playerId).every(p => p.isReady || !p.active);
             document.getElementById('start-game-btn').disabled = !allOthersReady;
 
@@ -300,7 +283,6 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('host-lobby-actions').style.display = 'none';
             document.getElementById('host-message').style.display = 'block';
             
-            // --- FIX: Reverted to Judgment's "Ready" button logic ---
             if (me) {
                 const readyBtn = document.getElementById('ready-btn');
                 readyBtn.disabled = me.isReady;
@@ -322,7 +304,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const me = players.find(p => p.playerId === myPersistentPlayerId);
         if (!me) return;
         
-        const myIndex = players.indexOf(me);
+        const myIndex = players.findIndex(p => p.playerId === me.playerId);
+        if (myIndex === -1) return; // Not in game yet
+        
         const orderedPlayers = [...players.slice(myIndex), ...players.slice(0, myIndex)];
         
         const slotPositions = [
@@ -337,10 +321,10 @@ window.addEventListener('DOMContentLoaded', () => {
         ];
 
         orderedPlayers.forEach((p, index) => {
-            if (p.status === 'Removed') return; // Don't render removed players
+            if (p.status === 'Removed') return;
             
             const container = slotPositions[index];
-            if (!container) return; // Handle > 8 players gracefully
+            if (!container) return;
             
             const meInGame = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
             const isHostInGame = meInGame ? meInGame.isHost : false;
@@ -365,7 +349,6 @@ window.addEventListener('DOMContentLoaded', () => {
             afkButton = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
         }
         
-        // NEW: Display card count
         const cardCount = player.hand ? player.hand.length : 0;
         
         slot.innerHTML = `
@@ -400,7 +383,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
         
-        // Copy final scoreboard
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
         document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent;
         
@@ -413,33 +395,74 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('warning-modal').classList.add('hidden');
     }
     
-    // RETAINED: Scoreboard Rendering
     function renderScoreboard(players) {
         // TODO: This needs to be completely rewritten for Seven of Hearts scoring
         const scoreboard = document.getElementById('scoreboard-content');
         scoreboard.innerHTML = '<p>Scoring logic not yet implemented.</p>';
     }
 
-    // --- NEW: Seven of Hearts Render Functions (Stubs) ---
+    // --- UPDATED: Real Seven of Hearts Render Functions ---
     
     function renderRiver(boardState) {
         const riverContainer = document.getElementById('river-container');
-        // TODO: In Phase 2, this will be a complex function that renders
-        // all 4 (or 8) layouts with overlapping cards.
         riverContainer.innerHTML = ''; // Clear it
         
-        // Placeholder text
-        if (Object.keys(boardState).length === 0 && window.gameState.players.length > 0) {
-            riverContainer.innerHTML = '<p style="text-align: center; opacity: 0.7;">Waiting for the 7 of Hearts...</p>';
-        } else {
-            // ... logic to render boardState
+        const allSuits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+        
+        for (const suit of allSuits) {
+            const layout = boardState[suit];
+            const suitZone = document.createElement('div');
+            suitZone.className = 'river-suit-zone';
+            
+            const riverLayout = document.createElement('div');
+            riverLayout.className = 'river-layout';
+
+            if (!layout) {
+                // Suit hasn't been started
+                riverLayout.innerHTML = `<div class="card-placeholder">${suit}</div>`;
+            } else {
+                // Render the overlapping stacks
+                // Low stack (A-6)
+                for (let r = layout.low; r < 7; r++) {
+                    const rank = RANKS[r-1]; // RANK_ORDER is 1-based, RANKS is 0-based
+                    riverLayout.appendChild(createMiniCard({ suit, rank }));
+                }
+                
+                // The 7 (Anchor)
+                const anchorCard = createMiniCard({ suit, rank: '7' });
+                anchorCard.classList.add('anchor-7');
+                riverLayout.appendChild(anchorCard);
+
+                // High stack (8-K)
+                for (let r = 8; r <= layout.high; r++) {
+                    const rank = RANKS[r-1];
+                    riverLayout.appendChild(createMiniCard({ suit, rank }));
+                }
+            }
+            suitZone.appendChild(riverLayout);
+            riverContainer.appendChild(suitZone);
         }
+    }
+    
+    // Create a smaller card for the river
+    function createMiniCard(card) {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card-mini';
+        
+        const suitSymbols = { 'Hearts': '♥', 'Spades': '♠', 'Diamonds': '♦', 'Clubs': '♣' };
+        const color = (card.suit === 'Hearts' || card.suit === 'Diamonds') ? 'red' : 'black';
+        
+        cardEl.classList.add(color);
+        cardEl.innerHTML = `
+            <div class="card-mini-rank">${card.rank}</div>
+            <div class="card-mini-suit">${suitSymbols[card.suit]}</div>
+        `;
+        return cardEl;
     }
 
     function renderGameLog(logHistory) {
         const logList = document.getElementById('game-log-list');
         if (!logList) return;
-        // Show last 5 entries, newest at the top
         logList.innerHTML = logHistory.slice(-5).reverse().map(entry => `<li>${entry}</li>`).join('');
     }
     
@@ -450,8 +473,13 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (!me || !me.hand) return;
 
-        // TODO: In Phase 2, sort the hand by suit and rank
-        const sortedHand = me.hand; 
+        // --- UPDATED: Sort the hand ---
+        const sortedHand = me.hand.sort((a, b) => {
+            if (SUITS_ORDER[a.suit] !== SUITS_ORDER[b.suit]) {
+                return SUITS_ORDER[a.suit] - SUITS_ORDER[b.suit];
+            }
+            return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
+        });
         
         sortedHand.forEach(card => {
             const cardEl = createCardElement(card);
@@ -459,19 +487,18 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // --- FIX: New, more robust card rendering function ---
     function createCardElement(card) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
         cardEl.dataset.suit = card.suit;
         cardEl.dataset.rank = card.rank;
+        cardEl.dataset.id = card.id; // Unique ID
         
         const suitSymbols = { 'Hearts': '♥', 'Spades': '♠', 'Diamonds': '♦', 'Clubs': '♣' };
         const color = (card.suit === 'Hearts' || card.suit === 'Diamonds') ? 'red' : 'black';
         
-        cardEl.classList.add(color); // Add 'red' or 'black' class for CSS
+        cardEl.classList.add(color);
         
-        // Create a structure that looks like a real card
         cardEl.innerHTML = `
             <div class="card-rank top">${card.rank}</div>
             <div class="card-suit">${suitSymbols[card.suit]}</div>
@@ -480,33 +507,72 @@ window.addEventListener('DOMContentLoaded', () => {
         
         return cardEl;
     }
-    // --- END FIX ---
 
-    
+    // --- UPDATED: Real Action Logic ---
     function updatePlayerActions(gs) {
         const passBtn = document.getElementById('pass-btn');
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
 
         if (me && me.playerId === gs.currentPlayerId && !gs.isPaused) {
             // It's my turn
-            
-            // TODO: In Phase 2, real logic here
-            const hasValidMove = false; // checkHandForValidMoves(me.hand, gs.boardState);
+            const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
             
             // Show pass button
             passBtn.style.display = 'block';
             
             // Disable pass button if player HAS a valid move
-            passBtn.disabled = hasValidMove;
+            passBtn.disabled = validMoves.length > 0;
             
-            // TODO: In Phase 2, highlight playable cards
-            // highlightPlayableCards(me.hand, gs.boardState);
+            // Highlight playable cards
+            highlightPlayableCards(validMoves);
 
         } else {
             // Not my turn
             passBtn.style.display = 'none';
-            // TODO: Remove highlights from cards
+            highlightPlayableCards([]); // Clear highlights
         }
+    }
+    
+    // --- NEW: Client-side validation ---
+    function getValidMoves(hand, boardState, isFirstMove) {
+        const validMoves = [];
+        if (isFirstMove) {
+            const sevenOfHearts = hand.find(c => c.rank === '7' && c.suit === 'Hearts');
+            return sevenOfHearts ? [sevenOfHearts] : [];
+        }
+
+        for (const card of hand) {
+            // Rule 1: Can always play a 7
+            if (card.rank === '7') {
+                validMoves.push(card);
+                continue;
+            }
+            
+            // Rule 2: Can build
+            const suitLayout = boardState[card.suit];
+            if (suitLayout) {
+                const cardRankVal = RANK_ORDER[card.rank];
+                if (cardRankVal === suitLayout.high + 1 || cardRankVal === suitLayout.low - 1) {
+                    validMoves.push(card);
+                }
+            }
+        }
+        return validMoves;
+    }
+
+    function highlightPlayableCards(validMoves) {
+        const handContainer = document.getElementById('my-hand');
+        // Convert move list to a searchable set of IDs
+        const validMoveIds = new Set(validMoves.map(card => card.id));
+
+        // Remove highlight from all
+        handContainer.querySelectorAll('.card').forEach(cardEl => {
+            if (validMoveIds.has(cardEl.dataset.id)) {
+                cardEl.classList.add('playable-card');
+            } else {
+                cardEl.classList.remove('playable-card');
+            }
+        });
     }
     
     // --- RETAINED: Draggable Modal Utility ---
@@ -541,7 +607,6 @@ window.addEventListener('DOMContentLoaded', () => {
             pos3 = e.clientX;
             pos4 = e.clientY;
             
-            // Use translation for smoother performance if not already moved
             if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
                  modalContent.style.left = '50%';
                  modalContent.style.top = '50%';
@@ -585,12 +650,10 @@ window.addEventListener('DOMContentLoaded', () => {
         header.addEventListener('touchstart', dragTouchStart, { passive: false });
     }
 
-    // Apply draggable to all retained modals
     makeDraggable(document.getElementById('scoreboard-modal'));
     makeDraggable(document.getElementById('confirm-end-game-modal'));
     makeDraggable(document.getElementById('afk-notification-modal'));
     makeDraggable(document.getElementById('confirm-hard-reset-modal'));
     makeDraggable(document.getElementById('warning-modal'));
-    makeDraggable(document.getElementById('game-over-modal')); // Make game-over modal draggable too
-    // REMOVED: last-trick and confirm-bid modals
+    makeDraggable(document.getElementById('game-over-modal'));
 });
