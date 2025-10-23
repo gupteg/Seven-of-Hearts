@@ -52,6 +52,7 @@ function initializeGame(readyPlayers, settings) {
     // This is just to test the hand rendering
     gamePlayers[0].hand.push({ suit: 'Hearts', rank: '7' });
     gamePlayers[0].hand.push({ suit: 'Spades', rank: 'K' });
+    gamePlayers[0].hand.push({ suit: 'Diamonds', rank: 'A' });
 
     const firstPlayerId = gamePlayers[0].playerId; // Placeholder
     const firstPlayerName = gamePlayers[0].name; // Placeholder
@@ -207,7 +208,9 @@ io.on('connection', (socket) => {
             return;
         }
 
-        const readyPlayers = players.filter(p => p.isReady && p.active);
+        // --- FIX: Filter now correctly includes the Host ---
+        const readyPlayers = players.filter(p => (p.isReady || p.isHost) && p.active);
+        
         // We'll set the *real* player limit (e.g., 3) later. 2 is fine for testing.
         if (readyPlayers.length < 2) { 
             socket.emit('warning', 'You need at least 2 ready players to start.');
