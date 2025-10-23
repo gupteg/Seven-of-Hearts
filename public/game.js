@@ -1,5 +1,5 @@
 window.addEventListener('DOMContentLoaded', () => {
-    // --- *** FIX: Use relative path, not hardcoded URL *** ---
+    // MODIFIED: Use relative path for socket connection
     const socket = io();
 
     window.gameState = {};
@@ -10,19 +10,8 @@ window.addEventListener('DOMContentLoaded', () => {
     let isInitialGameRender = true;
     let pauseCountdownInterval;
     let lobbyReturnInterval;
+    // REMOVED: Judgment-specific state
     
-    // --- *** NEW: Card SVG Filename Maps *** ---
-    const rankToFileMap = {
-        'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
-        '10': '10', '9': '9', '8': '8', '7': '7', '6': '6',
-        '5': '5', '4': '4', '3': '3', '2': '2'
-    };
-    const suitToFileMap = {
-        'Hearts': 'hearts', 'Spades': 'spades',
-        'Diamonds': 'diamonds', 'Clubs': 'clubs'
-    };
-    // --- *** END: Card Maps *** ---
-
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
         myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
@@ -30,11 +19,14 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('joinGame', { playerName: myPersistentPlayerName, playerId: myPersistentPlayerId });
         }
     });
+
+    // REMOVED: rankMap
     
     setupJoinScreenListeners();
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
+    // REMOVED: rearrange-hand-btn listener
 
     function setupJoinScreenListeners() {
         document.getElementById('join-game-btn').addEventListener('click', () => {
@@ -48,8 +40,9 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupLobbyEventListeners() {
+        // --- FIX: Reverted to Judgment's "Ready" logic ---
         document.getElementById('ready-btn').addEventListener('click', () => {
-            socket.emit('setPlayerReady');
+            socket.emit('setPlayerReady', true);
         });
 
         document.getElementById('start-game-btn').addEventListener('click', () => {
@@ -113,6 +106,8 @@ window.addEventListener('DOMContentLoaded', () => {
             isInitialGameRender = true;
         });
         
+        // REMOVED: Listeners for last-trick and confirm-bid modals
+
         // NEW: Listener for Pass Button
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
@@ -147,11 +142,15 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('my-hand').addEventListener('click', (e) => {
             const cardEl = e.target.closest('.card');
             if (cardEl) {
-                const cardData = { 
-                    suit: cardEl.dataset.suit, 
-                    rank: cardEl.dataset.rank 
-                };
-                console.log('Clicked card:', cardData);
+                // This is where we will emit the playCard event in Phase 2
+                // For now, it just proves the click is registered.
+                console.log('Clicked card with data:', cardEl.dataset.suit, cardEl.dataset.rank);
+                
+                // Example of what's to come (do not uncomment yet)
+                // const cardData = { 
+                //     suit: cardEl.dataset.suit, 
+                //     rank: cardEl.dataset.rank 
+                // };
                 // socket.emit('playCard', cardData);
             }
         });
@@ -257,22 +256,23 @@ window.addEventListener('DOMContentLoaded', () => {
         const playerList = document.getElementById('player-list');
         const me = players.find(p => p.playerId === myPersistentPlayerId);
         
+        // --- FIX: Added guard clause from original Judgment code ---
+        if (!me) { 
+            playerList.innerHTML = '<p>Joining...</p>';
+            return; 
+        }
+        
         playerList.innerHTML = '';
         players.forEach(p => {
             const li = document.createElement('li');
             let status = '';
-
-            // --- *** FIX: Only show status for non-hosts *** ---
-            if (!p.isHost) {
-                if (!p.active) {
-                    status = '<span class="player-status-badge reconnecting">(Offline)</span>';
-                } else if (p.isReady) {
-                    status = '<span style="color: green;">✅ Ready</span>';
-                } else {
-                    status = '<span style="color: #b00;">❌ Not Ready</span>';
-                }
+            if (!p.active) {
+                status = '<span class="player-status-badge reconnecting">(Offline)</span>';
+            } else if (p.isReady) {
+                status = '<span style="color: green;">✅ Ready</span>';
+            } else {
+                status = '<span style="color: #b00;">❌ Not Ready</span>';
             }
-            // --- *** END FIX *** ---
             
             li.innerHTML = `
                 <span>${p.isHost ? '👑' : ''} ${p.name} ${status}</span>
@@ -285,16 +285,22 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('player-lobby-actions').style.display = 'none';
             document.getElementById('host-lobby-actions').style.display = 'block';
             document.getElementById('host-message').style.display = 'none';
-            // Host is always ready, so check other players
-            const allOthersReady = players.filter(p => !p.isHost).every(p => p.isReady || !p.active);
+            
+            // Host is always "ready", check others
+            const allOthersReady = players.filter(p => p.playerId !== me.playerId).every(p => p.isReady || !p.active);
             document.getElementById('start-game-btn').disabled = !allOthersReady;
+
         } else {
             document.getElementById('player-lobby-actions').style.display = 'block';
             document.getElementById('host-lobby-actions').style.display = 'none';
             document.getElementById('host-message').style.display = 'block';
+            
+            // --- FIX: Reverted to Judgment's "Ready" button logic ---
             if (me) {
-                document.getElementById('ready-btn').textContent = me.isReady ? 'Unready' : 'Ready';
-                document.getElementById('ready-btn').classList.toggle('confirm-btn', me.isReady);
+                const readyBtn = document.getElementById('ready-btn');
+                readyBtn.disabled = me.isReady;
+                readyBtn.textContent = me.isReady ? 'Ready!' : 'Ready';
+                readyBtn.classList.toggle('confirm-btn', me.isReady);
             }
         }
     }
@@ -331,7 +337,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const container = slotPositions[index];
             if (!container) return; // Handle > 8 players gracefully
             
-            const slot = createPlayerSlot(p, me.isHost);
+            const meInGame = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
+            const isHostInGame = meInGame ? meInGame.isHost : false;
+
+            const slot = createPlayerSlot(p, isHostInGame);
             container.appendChild(slot);
         });
     }
@@ -412,10 +421,10 @@ window.addEventListener('DOMContentLoaded', () => {
         const riverContainer = document.getElementById('river-container');
         // TODO: In Phase 2, this will be a complex function that renders
         // all 4 (or 8) layouts with overlapping cards.
-        riverContainer.innerHTML = ''; // Clear old state
+        riverContainer.innerHTML = ''; // Clear it
         
         // Placeholder text
-        if (Object.keys(boardState).length === 0) {
+        if (Object.keys(boardState).length === 0 && window.gameState.players.length > 0) {
             riverContainer.innerHTML = '<p style="text-align: center; opacity: 0.7;">Waiting for the 7 of Hearts...</p>';
         } else {
             // ... logic to render boardState
@@ -445,33 +454,21 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // --- *** NEW: Implemented Card Rendering *** ---
     function createCardElement(card) {
         const cardEl = document.createElement('div');
         cardEl.className = 'card';
+        // --- ADDED: Real data for Phase 2 ---
         cardEl.dataset.suit = card.suit;
         cardEl.dataset.rank = card.rank;
         
-        const suit_file = suitToFileMap[card.suit];
-        const rank_file = rankToFileMap[card.rank];
-        
-        if (suit_file && rank_file) {
-            const fileName = `${suit_file}_${rank_file}.svg`;
-            const cardImg = document.createElement('img');
-            cardImg.src = `assets/cards/${fileName}`;
-            cardImg.alt = `${card.rank} of ${card.suit}`;
-            // Prevent dragging image (interferes with card click)
-            cardImg.draggable = false;
-            cardEl.appendChild(cardImg);
-        } else {
-            // Fallback for placeholder cards
-            cardEl.innerHTML = `${card.rank} ${card.suit}`;
-            cardEl.style.color = 'black'; // Temp
-        }
+        // This is a placeholder until we have SVGs
+        // We'll use the card-rendering logic from Judgment later
+        let color = (card.suit === 'Hearts' || card.suit === 'Diamonds') ? 'red' : 'black';
+        cardEl.innerHTML = `<span style="color:${color}; font-size: 1.2em; padding: 5px;">${card.rank} ${card.suit === 'Hearts' ? '♥' : card.suit === 'Spades' ? '♠' : card.suit === 'Diamonds' ? '♦' : '♣'}</span>`;
         
         return cardEl;
     }
-
+    
     function updatePlayerActions(gs) {
         const passBtn = document.getElementById('pass-btn');
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
@@ -529,8 +526,16 @@ window.addEventListener('DOMContentLoaded', () => {
             pos2 = pos4 - e.clientY;
             pos3 = e.clientX;
             pos4 = e.clientY;
-            modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
-            modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
+            
+            // Use translation for smoother performance if not already moved
+            if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
+                 modalContent.style.left = '50%';
+                 modalContent.style.top = '50%';
+                 modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`;
+            } else {
+                modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
+                modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
+            }
         };
 
         const elementTouchDrag = (e) => {
@@ -540,8 +545,15 @@ window.addEventListener('DOMContentLoaded', () => {
                 pos2 = pos4 - e.touches[0].clientY;
                 pos3 = e.touches[0].clientX;
                 pos4 = e.touches[0].clientY;
-                modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
-                modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
+                
+                if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
+                     modalContent.style.left = '50%';
+                     modalContent.style.top = '50%';
+                     modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`;
+                } else {
+                    modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
+                    modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
+                }
             }
         };
 
@@ -565,5 +577,6 @@ window.addEventListener('DOMContentLoaded', () => {
     makeDraggable(document.getElementById('afk-notification-modal'));
     makeDraggable(document.getElementById('confirm-hard-reset-modal'));
     makeDraggable(document.getElementById('warning-modal'));
-    makeDraggable(document.getElementById('game-over-modal'));
+    makeDraggable(document.getElementById('game-over-modal')); // Make game-over modal draggable too
+    // REMOVED: last-trick and confirm-bid modals
 });
