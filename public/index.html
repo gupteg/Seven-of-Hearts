@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven of Hearts Clubhouse</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="join-screen">
+        <h1>Seven of Hearts</h1>
+        <p>A Game of Sequential Strategy</p>
+        <input type="text" id="player-name-input" placeholder="Enter your name">
+        <button id="join-game-btn">Join Game</button>
+    </div>
+
+    <div id="lobby-screen" style="display: none;">
+        <h2>Game Lobby</h2>
+        <h3>Players:</h3>
+        <ul id="player-list"></ul>
+        
+        <div id="player-lobby-actions" class="lobby-actions">
+            <button id="ready-btn">Ready</button>
+        </div>
+        
+        <div id="host-lobby-actions" class="lobby-actions" style="display: none;">
+            <div id="host-game-settings" class="game-settings">
+                <div class="setting-group">
+                    <label>Decks:</label>
+                    <input type="radio" id="deck-1" name="deck-count" value="1" checked>
+                    <label for="deck-1">1 Deck</label>
+                    <input type="radio" id="deck-2" name="deck-count" value="2">
+                    <label for="deck-2">2 Decks</label>
+                </div>
+                <div class="setting-group">
+                    <label>Win Condition:</label>
+                    <input type="radio"id="win-first-out" name="win-condition" value="first_out" checked>
+                    <label for="win-first-out">First Out</label>
+                    <input type="radio" id="win-points" name="win-condition" value="points_100">
+                    <label for="win-points">100 Points</label>
+                </div>
+            </div>
+            <div id="host-controls">
+                <input type="password" id="host-password-input" placeholder="Host Password">
+                <button id="start-game-btn">Start Game</button>
+                <button id="end-session-btn">End Session</button>
+                <button id="hard-reset-btn" class="danger-btn">Hard Reset</button>
+            </div>
+        </div>
+
+        <p id="host-message" style="display: none;">(Waiting for the host to start the game)</p>
+    </div>
+
+    <div id="game-board" style="display: none;">
+        <div id="game-status-banner" style="display: none;"></div>
+        <div id="action-required-banner" style="display: none;"></div>
+
+        <div id="mobile-scroll-container">
+            <div id="left-column" class="game-column">
+                <div id="player-slots-left" class="player-slots-container">
+                    </div>
+                
+                <div id="game-log-ticker" class="info-tile">
+                    <h4>Recent Moves</h4>
+                    <ul id="game-log-list">
+                        </ul>
+                </div>
+                </div>
+
+            <div id="center-column" class="game-column">
+                <div id="player-slots-top" class="player-slots-container horizontal-players">
+                    </div>
+                
+                <div id="river-container" class="river-container">
+                    </div>
+                <div id="player-slots-bottom" class="player-slots-container horizontal-players">
+                    </div>
+                
+                <div id="player-hand-container">
+                    <div id="my-hand" class="hand">
+                        </div>
+                    <div id="player-actions">
+                        <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
+                    </div>
+                    </div>
+            </div>
+
+            <div id="right-column" class="game-column">
+                <div id="player-slots-right" class="player-slots-container">
+                    </div>
+                <button id="scoreboard-btn" class="info-tile-btn">Scoreboard</button>
+            </div>
+        </div>
+        <div id="page-indicator"></div>
+    </div>
+
+    <div id="scoreboard-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Scoreboard</h2>
+                <button id="scoreboard-modal-close" class="close-btn">&times;</button>
+            </div>
+            <div id="scoreboard-content">
+                </div>
+        </div>
+    </div>
+    
+    <div id="game-over-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="game-over-title">Game Over!</h2>
+            </div>
+            <p id="game-over-winner-text"></p>
+            <div id="game-over-scoreboard"></div>
+            <div class="modal-actions">
+                <button id="return-to-lobby-btn">Return to Lobby</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-end-game-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>End Game</h2>
+            </div>
+            <p>Are you sure you want to end this game for all players?</p>
+            <div class="modal-actions">
+                <button id="confirm-end-yes-btn" class="danger-btn">Yes, End Game</button>
+                <button id="confirm-end-no-btn">No, Cancel</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="afk-notification-modal" class="modal hidden">
+         <div class="modal-content">
+            <div class="modal-header">
+                <h2>You were marked as AFK</h2>
+            </div>
+            <p>The host has marked you as AFK. The game is paused for 60 seconds.</p>
+            <div class="modal-actions">
+                <button id="im-back-btn" class="confirm-btn">I'm Back!</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="confirm-hard-reset-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Hard Reset Session</h2>
+            </div>
+            <p>Are you sure? This will end any active game and remove all other players from the lobby.</p>
+            <div class="modal-actions">
+                <button id="confirm-reset-yes-btn" class="danger-btn">Yes, Hard Reset</button>
+                <button id="confirm-reset-no-btn">No, Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="warning-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="warning-modal-title">Alert</h2>
+            </div>
+            <p id="warning-modal-text"></p>
+            <div class="modal-actions">
+                <button id="warning-modal-ok-btn">OK</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
