@@ -7,6 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Serve files from the 'public' directory
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
@@ -36,6 +37,7 @@ function initializeGame(readyPlayers, settings) {
         playerId: p.playerId,
         name: p.name,
         socketId: p.socketId,
+        isHost: p.isHost, // Carry over host status
         status: 'Active',
         hand: [],
         // TODO: Add score for multi-round games
@@ -158,12 +160,13 @@ io.on('connection', (socket) => {
             }
         } else {
             // --- Lobby Logic ---
+            const isHost = players.length === 0;
             const newPlayer = {
                 playerId: `${socket.id}-${Date.now()}`,
                 name: playerName,
                 socketId: socket.id,
-                isHost: players.length === 0,
-                isReady: false,
+                isHost: isHost,
+                isReady: isHost, // <-- *** FIX: Host is ready by default ***
                 active: true
             };
             players.push(newPlayer);
@@ -183,12 +186,18 @@ io.on('connection', (socket) => {
     socket.on('kickPlayer', (playerIdToKick) => {
         const requester = players.find(p => p.socketId === socket.id);
         if (requester && requester.isHost) {
+            const kickedPlayer = players.find(p => p.playerId === playerIdToKick);
+            const kickedSocketId = kickedPlayer ? kickedPlayer.socketId : null;
+
             players = players.filter(p => p.playerId !== playerIdToKick);
             io.emit('lobbyUpdate', players);
-            const kickedSocket = io.sockets.sockets.get(players.find(p => p.playerId === playerIdToKick)?.socketId);
-            if (kickedSocket) {
-                kickedSocket.emit('kicked');
-                kickedSocket.disconnect();
+
+            if (kickedSocketId) {
+                const kickedSocket = io.sockets.sockets.get(kickedSocketId);
+                if (kickedSocket) {
+                    kickedSocket.emit('kicked');
+                    kickedSocket.disconnect();
+                }
             }
         }
     });
@@ -203,6 +212,8 @@ io.on('connection', (socket) => {
         }
 
         const readyPlayers = players.filter(p => p.isReady && p.active);
+        // Ensure host is included, as they might be the only player (for testing)
+        // In production, we'll want a real player count check.
         if (readyPlayers.length < 2) { // TODO: We can change this to 3 for a real game
             socket.emit('warning', 'You need at least 2 ready players to start.');
             return;
@@ -300,7 +311,7 @@ io.on('connection', (socket) => {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) {
                 endSession();
-            }
+legacy            }
         }
     });
 
@@ -337,6 +348,6 @@ io.on('connection', (socket) => {
 });
 // --- END: Retained Logic ---
 
-const PORT = process.env.PORT || 5000;
-
+const PORT = process.env.PORT || 10000;
+// --- *** FIX: Added '0.0.0.0' for deployment health checks *** ---
 server.listen(PORT, '0.0.0.0', () => console.log(`Server running on port ${PORT}`));
