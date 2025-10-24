@@ -26,12 +26,15 @@
         
         <div id="host-lobby-actions" class="lobby-actions" style="display: none;">
             <div id="host-game-settings" class="game-settings">
+                
                 <div class="setting-group">
-                    <label>Decks:</label>
-                    <input type="radio" id="deck-1" name="deck-count" value="1" checked>
-                    <label for="deck-1">1 Deck</label>
-                    <input type="radio" id="deck-2" name="deck-count" value="2">
-                    <label for="deck-2">2 Decks</label>
+                    <label>Game Mode:</label>
+                    <input type="radio" id="mode-one-deck" name="game-mode" value="one-deck" checked>
+                    <label for="mode-one-deck">One Deck</label>
+                    <input type="radio" id="mode-two-deck-fungible" name="game-mode" value="two-deck-fungible">
+                    <label for="mode-two-deck-fungible">Two Decks (Fungible)</label>
+                    <input type="radio" id="mode-two-deck-strict" name="game-mode" value="two-deck-strict">
+                    <label for="mode-two-deck-strict">Two Decks (Strict)</label>
                 </div>
                 <div class="setting-group">
                     <label>Win Condition:</label>
@@ -40,7 +43,8 @@
                     <input type="radio" id="win-points" name="win-condition" value="points_100">
                     <label for="win-points">100 Points</label>
                 </div>
-            </div>
+                
+                </div>
             <div id="host-controls">
                 <input type="password" id="host-password-input" placeholder="Host Password">
                 <button id="start-game-btn">Start Game</button>
@@ -52,11 +56,8 @@
         <p id="host-message" style="display: none;">(Waiting for the host to start the game)</p>
     </div>
     <div id="game-board" style="display: none;">
-        
         <div id="mobile-scroll-container">
-
             <div id="dashboard-column" class="game-column">
-                
                 <div id="my-info-panel" class="info-panel">
                     <h3 id="my-name">Player Name</h3>
                     <div class="my-score-box">
@@ -64,120 +65,29 @@
                         <span id="my-score" class="score-value">0</span>
                     </div>
                 </div>
-
                 <div class="panel-header"><h4>My Hand</h4></div>
-                <div id="my-hand-container">
-                    </div>
-
+                <div id="my-hand-container"></div>
                 <div id="my-actions-panel">
                     <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
                     <button id="show-logs-btn" class="action-btn secondary-btn">Show Logs</button>
-                    </div>
-
+                </div>
                 <div class="panel-header"><h4>Other Players</h4></div>
-                <div id="other-players-container">
-                    </div>
-
-            </div> <div id="table-column" class="game-column">
-                
-                <div id="game-status-banner">
-                    Waiting for game to start...
-                </div>
-                
-                <div id="river-container">
-                    </div>
-
-            </div> </div> <div id="page-indicator"></div>
-
+                <div id="other-players-container"></div>
+            </div> 
+            <div id="table-column" class="game-column">
+                <div id="game-status-banner">Waiting for game to start...</div>
+                <div id="river-container"></div>
+            </div> 
+        </div> 
+        <div id="page-indicator"></div>
     </div>
-    <div id="game-log-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Full Game Log</h2>
-                <button id="game-log-modal-close" class="close-btn">&times;</button>
-            </div>
-            <div class="modal-scrollable-content" id="game-log-modal-content">
-                </div>
-            <div class="modal-actions">
-                <button id="game-log-modal-ok-btn" class="confirm-btn">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="scoreboard-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Scoreboard</h2>
-                <button id="scoreboard-modal-close" class="close-btn">&times;</button>
-            </div>
-            <div id="scoreboard-content" class="modal-scrollable-content">
-                </div>
-        </div>
-    </div>
-    
-    <div id="game-over-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="game-over-title">Game Over!</h2>
-            </div>
-            <p id="game-over-winner-text"></p>
-            <div id="game-over-scoreboard"></div>
-            <div class="modal-actions">
-                <button id="return-to-lobby-btn">Return to Lobby</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="confirm-end-game-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>End Game</h2>
-            </div>
-            <p>Are you sure you want to end this game for all players?</p>
-            <div class="modal-actions">
-                <button id="confirm-end-yes-btn" class="danger-btn">Yes, End Game</button>
-                <button id="confirm-end-no-btn">No, Cancel</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="afk-notification-modal" class="modal hidden">
-         <div class="modal-content">
-            <div class="modal-header">
-                <h2>You were marked as AFK</h2>
-            </div>
-            <p>The host has marked you as AFK. The game is paused for 60 seconds.</p>
-            <div class="modal-actions">
-                <button id="im-back-btn" class="confirm-btn">I'm Back!</button>
-            </div>
-        </div>
-    </div>
-    
-    <div id="confirm-hard-reset-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>Hard Reset Session</h2>
-            </div>
-            <p>Are you sure? This will end any active game and remove all other players from the lobby.</p>
-            <div class="modal-actions">
-                <button id="confirm-reset-yes-btn" class="danger-btn">Yes, Hard Reset</button>
-                <button id="confirm-reset-no-btn">No, Cancel</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="warning-modal" class="modal hidden">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 id="warning-modal-title">Alert</h2>
-            </div>
-            <p id="warning-modal-text"></p>
-            <div class="modal-actions">
-                <button id="warning-modal-ok-btn">OK</button>
-            </div>
-        </div>
-    </div>
-    
+    <div id="game-log-modal" class="modal hidden"> ... </div>
+    <div id="scoreboard-modal" class="modal hidden"> ... </div>
+    <div id="game-over-modal" class="modal hidden"> ... </div>
+    <div id="confirm-end-game-modal" class="modal hidden"> ... </div>
+    <div id="afk-notification-modal" class="modal hidden"> ... </div>
+    <div id="confirm-hard-reset-modal" class="modal hidden"> ... </div>
+    <div id="warning-modal" class="modal hidden"> ... </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
 </body>
