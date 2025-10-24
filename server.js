@@ -64,10 +64,12 @@ function checkValidMove(card, boardState, hand, isFirstMove) {
         return card.rank === '7' && card.suit === 'Hearts';
     }
 
-    // Rule 1: Can always play a 7 to start a new suit
+    // --- BUG FIX: "Duplicate 7" Bug ---
+    // Rule 1: Can play a 7 ONLY if that suit's layout hasn't been started.
     if (card.rank === '7') {
-        return true;
+        return !boardState[card.suit]; // This is the fix
     }
+    // --- END BUG FIX ---
 
     // Rule 2: Can build on an existing layout
     const suitLayout = boardState[card.suit];
