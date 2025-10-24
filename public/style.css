@@ -1,7 +1,21 @@
 /* --- 3-COLUMN LAYOUT --- */
 #game-board { height: 100%; display: flex; gap: 15px; position: relative; }
 #left-column { flex: 5; display: flex; flex-direction: column; position: relative; overflow-y: auto; gap: 15px; } /* Added gap */
-#center-column { flex: 4; display: flex; flex-direction: column; background-color: var(--felt-green); border: 10px solid var(--teak-light); border-radius: 15px; padding: 15px; }
+
+/* --- FIX: Added height: 100% and box-sizing --- */
+#center-column { 
+    flex: 4; 
+    display: flex; 
+    flex-direction: column; 
+    background-color: var(--felt-green); 
+    border: 10px solid var(--teak-light); 
+    border-radius: 15px; 
+    padding: 15px; 
+    height: 100%; /* Force it to be 100% of its parent (the body) */
+    box-sizing: border-box; /* Include padding/border in the height calculation */
+}
+/* --- END FIX --- */
+
 #right-column { flex: 3; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
 #mobile-scroll-container { display: contents; } /* Behaves normally on desktop */
 #page-indicator { display: none; } /* Hidden on desktop */
@@ -62,11 +76,13 @@ h1, h2, h3 { color: var(--gold-accent); }
     flex-direction: column;
     gap: 5px; /* Tighter gap */
     width: 100%;
-    flex-grow: 1;
-    overflow-y: auto;
+    flex-grow: 1; /* This will now work */
+    overflow-y: auto; /* This will now work */
+    min-height: 100px; /* Give it a minimum height */
     padding: 10px;
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
+    box-sizing: border-box;
 }
 .river-suit-zone {
     padding: 2px;
@@ -155,26 +171,39 @@ h1, h2, h3 { color: var(--gold-accent); }
 /* --- END: Game Log Styles --- */
 
 
-/* --- RETAINED: Hand & Card Styles --- */
-#player-hand-container { position: relative; }
-.hand { display: flex; justify-content: center; align-items: flex-end; padding: 10px; min-height: 140px; /* Increased height */ }
+/* --- UPDATED: Hand & Card Styles --- */
+#player-hand-container { 
+    position: relative;
+    flex-shrink: 0; /* --- Prevent hand from being squished */
+}
+.hand { 
+    display: flex; 
+    /* --- Changed center to flex-start --- */
+    justify-content: flex-start; 
+    align-items: flex-end; 
+    padding: 10px; 
+    min-height: 140px;
+    /* --- Added horizontal scroll --- */
+    overflow-x: auto;
+    padding-bottom: 5px; /* Room for scrollbar */
+}
 
-/* --- FIX: New, proper card styles --- */
 .card {
-    width: 80px; /* Increased width */
-    height: 120px; /* Increased height */
+    width: 80px;
+    height: 120px;
     border: 1px solid #777;
     border-radius: 8px;
     background-color: white;
     color: black;
     position: relative;
-    margin-left: -40px; /* Adjusted overlap */
+    margin-left: -40px;
     box-shadow: -2px 0 5px rgba(0,0,0,0.3);
     cursor: pointer;
     transition: transform 0.2s ease, z-index 0.2s ease, box-shadow 0.2s ease;
-    font-family: Arial, sans-serif; /* Use a clear font for cards */
+    font-family: Arial, sans-serif;
     font-weight: bold;
-    user-select: none; /* Prevent text selection */
+    user-select: none;
+    flex-shrink: 0; /* --- ADDED: Prevent cards from squishing */
 }
 .card:first-child { margin-left: 0; }
 .card:hover { transform: translateY(-20px); z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
@@ -286,7 +315,7 @@ button:hover { background-color: #ffc400; }
     #game-board { flex-direction: column; height: 100%; }
     #mobile-scroll-container { display: flex; width: 300%; overflow-x: scroll; scroll-snap-type: x mandatory; }
     .game-column { width: 100%; flex-shrink: 0; scroll-snap-align: start; padding: 10px; box-sizing: border-box; }
-    #center-column { order: 0; }
+    #center-column { order: 0; height: auto; } /* Let center column be auto-height on mobile */
     #left-column { order: 1; }
     #right-column { order: 2; }
     
