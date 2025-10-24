@@ -327,7 +327,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const container = slotPositions[index];
             if (!container) return;
             
-            // --- FIX: Cleaned up redundant logic ---
             const isLocalPlayerHost = me.isHost;
             const slot = createPlayerSlot(p, isLocalPlayerHost);
             container.appendChild(slot);
@@ -559,7 +558,8 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        return validMoves.length > 0; // Return true if any valid moves exist
+        // --- FIX: Return the array, not a boolean ---
+        return validMoves;
     }
 
     function highlightPlayableCards(validMoves) {
