@@ -350,14 +350,15 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const cardCount = player.hand ? player.hand.length : 0;
         
-        // --- FIX: Added the missing </div> tag ---
+        // --- BUG FIX: "Broken DOM" Bug ---
+        // Added the missing closing </div> tag for .player-name
         slot.innerHTML = `
             <div class="player-name">${player.name} ${player.isHost ? '👑' : ''}</div>
             ${statusBadge}
             <div class="player-card-count">Cards: ${cardCount}</div> 
             ${afkButton}
         `;
-        // --- END FIX ---
+        // --- END BUG FIX ---
         return slot;
     }
 
@@ -393,7 +394,10 @@ window.addEventListener('DOMContentLoaded', () => {
     function showWarning(title, text) {
         document.getElementById('warning-modal-title').textContent = title;
         document.getElementById('warning-modal-text').textContent = text;
-        document.getElementById('warning-modal').classList.add('hidden');
+        // --- BUG FIX: "Silent Failure" Bug ---
+        // Was .add('hidden'), changed to .remove('hidden') to SHOW the modal
+        document.getElementById('warning-modal').classList.remove('hidden');
+        // --- END BUG FIX ---
     }
     
     function renderScoreboard(players) {
@@ -543,11 +547,15 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         for (const card of hand) {
-            // Rule 1: Can always play a 7
+            // --- BUG FIX: "Duplicate 7" Bug ---
+            // Rule 1: Can play a 7 ONLY if that suit's layout hasn't been started
             if (card.rank === '7') {
-                validMoves.push(card);
+                if (!boardState[card.suit]) { // This is the fix
+                    validMoves.push(card);
+                }
                 continue;
             }
+            // --- END BUG FIX ---
             
             // Rule 2: Can build
             const suitLayout = boardState[card.suit];
