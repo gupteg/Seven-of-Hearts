@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
     let myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
     
-    // --- Card Naming Maps for SVGs ---
+    // Card Naming Maps for SVGs
     const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
     const RANK_MAP = {
         'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -313,7 +313,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
         sortedHand.forEach(card => {
             const cardEl = createCardImageElement(card);
-            // Only add playable-card class if it's my turn
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId) {
                 cardEl.classList.add('playable-card');
             }
@@ -415,15 +414,11 @@ window.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = logHistory.slice().reverse().map(entry => `<div>${entry}</div>`).join('');
     }
 
-    /**
-     * Creates an <img> element for a card in the player's hand.
-     */
     function createCardImageElement(card) {
         const img = document.createElement('img');
         img.className = 'card-img';
         const suit = SUIT_MAP[card.suit];
         const rank = RANK_MAP[card.rank];
-        // --- BUG FIX: Removed "/public" from the path ---
         img.src = `/assets/cards/${suit}_${rank}.svg`;
         img.alt = `${card.rank} of ${card.suit}`;
         img.dataset.id = card.id;
@@ -432,51 +427,54 @@ window.addEventListener('DOMContentLoaded', () => {
         return img;
     }
 
-    /**
-     * Creates a smaller <img> element for the river.
-     */
     function createRiverCardImageElement(suit, rank) {
         const img = document.createElement('img');
         img.className = 'river-card';
         const suitName = SUIT_MAP[suit];
         const rankName = RANK_MAP[rank];
-        // --- BUG FIX: Removed "/public" from the path ---
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
         return img;
     }
     
+    // --- BUG FIX: Corrected "Smart River" Rendering Logic ---
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
         
         // TODO: This function needs to be updated for 2-deck logic
-        // For now, it will render the 4 base suits
         
         const suitsToRender = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
         const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
         suitsToRender.forEach(suit => {
-            const layout = boardState[suit.toLowerCase()]; // e.g., boardState.hearts
+            // NOTE: Server state uses "Hearts", "Diamonds", etc.
+            const layout = boardState[suit];
             const row = document.createElement('div');
             row.className = 'river-row';
 
-            if (!layout || (layout.low === 7 && layout.high === 7)) {
+            if (!layout) {
+                 // Suit not started
                  row.innerHTML = `<div class="river-placeholder">${suit}</div>`;
             } else {
-                // Ranks are 1-based, allRanks is 0-based
-                const lowRankIndex = layout.low - 1; // e.g., 6 becomes index 5 ('6')
-                const highRankIndex = layout.high - 1; // e.g., 8 becomes index 7 ('8')
+                // Server state { low: 7, high: 7 } means ONLY 7 is played
+                // Server state { low: 6, high: 8 } means 6, 7, 8 are played
+                
+                // --- This is the fix ---
+                // The server's `low` and `high` are the *actual* min/max cards played
+                const lowRankVal = layout.low; // e.g., 6
+                const highRankVal = layout.high; // e.g., 8
 
-                for (let i = lowRankIndex; i <= highRankIndex; i++) {
-                    const rank = allRanks[i];
-                    if (!rank) continue; // Should not happen, but a good safeguard
-                    const cardImg = createRiverCardImageElement(suit, rank);
+                // Loop from the lowest card value to the highest
+                for (let r = lowRankVal; r <= highRankVal; r++) {
+                    // Find rank string (e.g., 7 -> '7', 13 -> 'K')
+                    const rankStr = allRanks[r-1];
+                    if (!rankStr) continue;
                     
-                    // Show 7, low, and high cards visibly
-                    // lowRankIndex is the '6' (e.g., index 5)
-                    // highRankIndex is the '8' (e.g., index 7)
-                    if (rank === '7' || i === lowRankIndex || i === highRankIndex) {
+                    const cardImg = createRiverCardImageElement(suit, rankStr);
+                    
+                    // "Smart" visible logic: Show 7, the lowest card, and the highest card
+                    if (rankStr === '7' || r === lowRankVal || r === highRankVal) {
                         cardImg.classList.add('visible');
                     }
                     row.appendChild(cardImg);
@@ -487,6 +485,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    // --- BUG FIX: Corrected Client-Side Validation Logic ---
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
         if (!hand) return [];
@@ -497,13 +496,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         for (const card of hand) {
-            const suitKey = card.suit.toLowerCase();
-            const layout = boardState[suitKey];
+            // NOTE: Server state uses "Hearts", "Diamonds", etc.
+            const layout = boardState[card.suit];
             const cardRankVal = RANK_ORDER[card.rank];
 
             // Rule 1: Can play a 7 if that suit hasn't been started
             if (card.rank === '7') {
-                if (!layout || layout.low === 7) { 
+                if (!layout) { // If layout doesn't exist, 7 is playable
                     validMoves.push(card);
                 }
                 continue;
@@ -511,8 +510,8 @@ window.addEventListener('DOMContentLoaded', () => {
             
             // Rule 2: Can build
             if (layout) {
-                // --- BUG FIX: Changed from (layout.low - 1) to (layout.low) ---
-                if (cardRankVal === layout.low || cardRankVal === layout.high) {
+                // Server logic: card is valid if it's one *outside* the current range
+                if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) {
                     validMoves.push(card);
                 }
             }
@@ -559,13 +558,13 @@ window.addEventListener('DOMContentLoaded', () => {
             if (e.touches.length === 1) {
                 e.preventDefault();
                 pos1 = pos3 - e.touches[0].clientX;
-                pos2 = pos4 - e.touches[0].clientY;
+                pos2 = pos4 - e.clientY;
                 pos3 = e.touches[0].clientX;
                 pos4 = e.touches[0].clientY;
                 if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
                      modalContent.style.left = '50%';
                      modalContent.style.top = '50%';
-                     modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`;
+                     modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - 2}px))`;
                 } else {
                     modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
                     modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
