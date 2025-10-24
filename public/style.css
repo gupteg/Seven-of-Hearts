@@ -61,8 +61,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    /* This column itself is no longer scrollable */
-    overflow: hidden; /* Prevent this column from scrolling */
+    overflow: hidden; 
     max-height: 100%;
 }
 
@@ -77,7 +76,7 @@ body {
     border-radius: 15px;
     padding: 15px;
     box-sizing: border-box;
-    overflow-y: auto; /* Allow river to scroll */
+    overflow-y: auto; 
     max-height: 100%;
 }
 
@@ -85,7 +84,7 @@ body {
     border-bottom: 2px solid var(--teak-light);
     padding-bottom: 5px;
     margin-bottom: 5px;
-    flex-shrink: 0; /* --- BUG FIX: Prevent header from shrinking --- */
+    flex-shrink: 0; 
 }
 .panel-header h4 {
     margin: 0;
@@ -102,7 +101,7 @@ body {
     padding: 15px;
     text-align: center;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    flex-shrink: 0; /* --- BUG FIX: Prevent shrinking --- */
+    flex-shrink: 0; 
 }
 #my-info-panel h3 { margin: 0 0 10px 0; color: var(--light-text); }
 .my-score-box { font-size: 1.2em; }
@@ -112,18 +111,16 @@ body {
 #my-hand-container {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: center; 
     gap: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.2);
     border-radius: 8px;
-    
-    /* --- BUG FIX: Make hand container scrollable --- */
     flex-grow: 1;
     flex-shrink: 1;
     overflow-y: auto;
-    min-height: 100px; /* Give it a minimum height */
-    align-content: flex-start; /* Stop cards from centering vertically */
+    min-height: 100px; 
+    align-content: flex-start; 
 }
 
 /* Action Buttons */
@@ -131,8 +128,8 @@ body {
     display: flex;
     gap: 10px;
     justify-content: center;
-    flex-shrink: 0; /* --- BUG FIX: Prevent shrinking --- */
-    padding: 5px 0; /* Add a little space */
+    flex-shrink: 0; 
+    padding: 5px 0; 
 }
 .action-btn {
     padding: 12px 20px;
@@ -157,12 +154,10 @@ body {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
-    
-    /* --- BUG FIX: Make other players scrollable --- */
     flex-grow: 1;
     flex-shrink: 1;
     overflow-y: auto;
-    min-height: 100px; /* Give it a minimum height */
+    min-height: 100px; 
     align-content: flex-start;
     background: rgba(0,0,0,0.1);
     padding: 10px;
@@ -177,7 +172,7 @@ body {
     padding: 10px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
     position: relative;
-    height: 90px; /* --- BUG FIX: Give tiles a fixed height --- */
+    height: 90px; 
     box-sizing: border-box;
 }
 .other-player-tile.active-player {
@@ -208,7 +203,7 @@ body {
     cursor: pointer;
     box-shadow: 0 0 20px var(--gold-accent);
     border: 3px solid var(--gold-accent);
-    box-sizing: border-box; /* Include border in size */
+    box-sizing: border-box; 
 }
 .card-img.playable-card:hover {
     transform: translateY(-10px) scale(1.05);
@@ -235,6 +230,8 @@ body {
     gap: 10px;
     flex-grow: 1;
 }
+
+/* --- VISUAL ENHANCEMENT FIX --- */
 .river-row {
     background: rgba(0,0,0,0.2);
     border-radius: 8px;
@@ -242,25 +239,24 @@ body {
     display: flex;
     align-items: center;
     min-height: 100px;
+    /* This is the fix: */
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 5px; /* Spacing between cards/placeholders */
 }
 .river-card {
     width: 70px;
     height: 98px;
     border-radius: 5px;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-    margin-left: -55px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    /* Remove all stacking logic: */
+    /* margin-left: -55px; */ 
     transition: all 0.2s ease;
+    flex-shrink: 0; /* Prevent cards from squishing */
 }
-.river-card.visible {
-    margin-left: 5px;
-    z-index: 10;
-    border: 2px solid var(--gold-accent);
-    transform: scale(1.05);
-    box-sizing: border-box;
-}
-.river-card:first-child {
-    margin-left: 0;
-}
+/* Remove the "visible" class logic as it's no longer needed */
+/* .river-card.visible { ... } */
+
 .river-placeholder {
     font-size: 1.5em;
     font-weight: bold;
@@ -269,7 +265,25 @@ body {
     text-align: center;
     width: 100%;
 }
-/* --- END: Table & River Styles --- */
+
+/* New placeholder for playable cards */
+.river-card-placeholder {
+    width: 70px;
+    height: 98px;
+    border-radius: 5px;
+    border: 2px dashed var(--gold-accent);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold-accent);
+    font-family: Arial, sans-serif;
+    font-size: 1.5em;
+    font-weight: bold;
+    flex-shrink: 0; /* Prevent shrinking */
+    opacity: 0.6;
+}
+/* --- END: VISUAL ENHANCEMENT FIX --- */
 
 
 /* --- Modal Styles --- */
@@ -384,12 +398,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     .game-column {
         flex: 0 0 100%;
         width: 100%;
-        max-height: none; /* --- BUG FIX: Allow column to be full height --- */
-        min-height: 100%; /* --- BUG FIX: Ensure it fills screen --- */
+        max-height: none; 
+        min-height: 100%; 
         box-sizing: border-box;
         padding: 10px;
         scroll-snap-align: center;
-        /* --- BUG FIX: Each column scrolls independently --- */
         overflow-y: auto;
     }
 
@@ -426,8 +439,12 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     .river-card {
         width: 50px;
         height: 70px;
-        margin-left: -40px;
     }
     .river-row { min-height: 80px; }
+    .river-card-placeholder {
+        width: 50px;
+        height: 70px;
+        font-size: 1em;
+    }
 }
 /* --- END: Mobile --- */

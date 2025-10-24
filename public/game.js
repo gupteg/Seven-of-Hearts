@@ -158,9 +158,6 @@ window.addEventListener('DOMContentLoaded', () => {
     socket.on('joinSuccess', (playerId) => {
         myPersistentPlayerId = playerId;
         sessionStorage.setItem('sevenOfHeartsPlayerId', playerId);
-        // --- BUG FIX: This check is for rejoining the LOBBY ---
-        // If we are rejoining a game, 'updateGameState' will handle the screen switch.
-        // If we are joining the lobby, this is correct.
         if (!window.gameState) {
             document.getElementById('join-screen').style.display = 'none';
             document.getElementById('lobby-screen').style.display = 'block';
@@ -181,19 +178,15 @@ window.addEventListener('DOMContentLoaded', () => {
         location.reload();
     });
 
-    // --- BUG FIX: Added forceDisconnect handler ---
     socket.on('forceDisconnect', () => {
-        // Kicked by host or hard reset
         sessionStorage.removeItem('sevenOfHeartsPlayerId');
         sessionStorage.removeItem('sevenOfHeartsPlayerName');
         myPersistentPlayerId = null;
         myPersistentPlayerName = null;
-        // Reload the page, which will put user at the join screen
         location.reload();
     });
 
     socket.on('lobbyUpdate', (players) => {
-        // This event signals a return to lobby
         document.getElementById('game-board').style.display = 'none';
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'block';
@@ -209,11 +202,9 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Received GameState:', gs);
         window.gameState = gs;
         
-        // --- BUG FIX: Add screen transition for reconnect ---
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-board').style.display = 'flex';
-        // --- END BUG FIX ---
         
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
         if (!me) return;
@@ -239,17 +230,10 @@ window.addEventListener('DOMContentLoaded', () => {
         if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
         lobbyReturnInterval = setInterval(() => {
              document.getElementById('game-over-modal').classList.add('hidden');
-             // --- BUG FIX: Do NOT show lobby, wait for lobbyUpdate ---
-             // document.getElementById('game-board').style.display = 'none';
-             // document.getElementById('lobby-screen').style.display = 'block';
              isInitialGameRender = true;
              clearInterval(lobbyReturnInterval);
         }, 10000);
     });
-
-    // --- BUG FIX: This handler is now 'forceDisconnect' ---
-    // socket.on('hardReset', () => { ... });
-
     
     socket.on('youWereMarkedAFK', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
@@ -268,10 +252,9 @@ window.addEventListener('DOMContentLoaded', () => {
         const me = players.find(p => p.playerId === myPersistentPlayerId);
         
         if (!me) { 
-            // This can happen if host resets and we refresh
             document.getElementById('join-screen').style.display = 'block';
             document.getElementById('lobby-screen').style.display = 'none';
-            sessionStorage.removeItem('sevenOfHeartsPlayerId'); // Clear invalid ID
+            sessionStorage.removeItem('sevenOfHeartsPlayerId');
             myPersistentPlayerId = null;
             return; 
         }
@@ -285,7 +268,6 @@ window.addEventListener('DOMContentLoaded', () => {
             } else if (p.isReady) { status = '<span style="color: green;">✅ Ready</span>';
             } else { status = '<span style="color: #b00;">❌ Not Ready</span>'; }
             
-            // --- BUG FIX: Kick buttons now work ---
             li.innerHTML = `<span>${p.name} ${status}</span> ${(me && me.isHost && p.playerId !== me.playerId) ? `<button class="kick-btn danger-btn" data-player-id="${p.playerId}">Kick</button>` : ''}`;
             playerList.appendChild(li);
         });
@@ -449,7 +431,6 @@ window.addEventListener('DOMContentLoaded', () => {
             content.innerHTML = "<div>No log entries yet.</div>";
             return;
         }
-        // Logs are already pre-sorted, just join them
         content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
@@ -475,10 +456,21 @@ window.addEventListener('DOMContentLoaded', () => {
         img.alt = `${rank} of ${suit}`;
         return img;
     }
+
+    // --- NEW: Helper function for river placeholders ---
+    function createRiverPlaceholder(rank) {
+        const el = document.createElement('div');
+        el.className = 'river-card-placeholder';
+        el.textContent = rank;
+        return el;
+    }
     
+    // --- VISUAL ENHANCEMENT: New River Logic ---
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
+        
+        // TODO: This function needs to be updated for 2-deck logic
         
         const suitsToRender = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
         const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
@@ -489,26 +481,36 @@ window.addEventListener('DOMContentLoaded', () => {
             row.className = 'river-row';
 
             if (!layout) {
+                 // Suit not started
                  row.innerHTML = `<div class="river-placeholder">${suit}</div>`;
             } else {
-                const lowRankVal = layout.low; 
-                const highRankVal = layout.high;
+                const lowRankVal = layout.low; // e.g., 7
+                const highRankVal = layout.high; // e.g., 7
 
+                // 1. Add low placeholder IF low card is not Ace
+                if (lowRankVal > 1) { // 1 is 'A'
+                    const prevRank = allRanks[lowRankVal - 2]; // Get rank string for card below
+                    row.appendChild(createRiverPlaceholder(prevRank));
+                }
+
+                // 2. Add all played cards
                 for (let r = lowRankVal; r <= highRankVal; r++) {
                     const rankStr = allRanks[r-1];
-                    if (!rankStr) continue;
-                    
-                    const cardImg = createRiverCardImageElement(suit, rankStr);
-                    
-                    if (rankStr === '7' || r === lowRankVal || r === highRankVal) {
-                        cardImg.classList.add('visible');
+                    if (rankStr) {
+                        row.appendChild(createRiverCardImageElement(suit, rankStr));
                     }
-                    row.appendChild(cardImg);
+                }
+
+                // 3. Add high placeholder IF high card is not King
+                if (highRankVal < 13) { // 13 is 'K'
+                    const nextRank = allRanks[highRankVal]; // Get rank string for card above
+                    row.appendChild(createRiverPlaceholder(nextRank));
                 }
             }
             riverContainer.appendChild(row);
         });
     }
+
 
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
@@ -578,7 +580,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (e.touches.length === 1) {
                 e.preventDefault();
                 pos1 = pos3 - e.touches[0].clientX;
-                pos2 = pos4 - e.touches[0].clientY;
+                pos2 = pos4 - e.clientY;
                 pos3 = e.touches[0].clientX;
                 pos4 = e.touches[0].clientY;
                 if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
