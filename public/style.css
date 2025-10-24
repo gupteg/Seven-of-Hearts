@@ -1,5 +1,12 @@
 /* --- 3-COLUMN LAYOUT --- */
-#game-board { height: 100%; display: flex; gap: 15px; position: relative; }
+#game-board { 
+    /* --- BUG FIX --- */
+    /* Changed height to min-height to allow the board to grow */
+    min-height: 100%; 
+    display: flex; 
+    gap: 15px; 
+    position: relative; 
+}
 #left-column { flex: 5; display: flex; flex-direction: column; position: relative; overflow-y: auto; gap: 15px; } /* Added gap */
 
 /* --- FIX: Added height: 100% and box-sizing --- */
@@ -11,7 +18,9 @@
     border: 10px solid var(--teak-light); 
     border-radius: 15px; 
     padding: 15px; 
-    height: 100%; /* Force it to be 100% of its parent (the body) */
+    /* --- BUG FIX --- */
+    /* Removed height: 100%. As a flex item, it will stretch automatically. */
+    /* This was the primary cause of the overflow. */
     box-sizing: border-box; /* Include padding/border in the height calculation */
 }
 /* --- END FIX --- */
@@ -21,7 +30,19 @@
 #page-indicator { display: none; } /* Hidden on desktop */
 
 :root { --teak-dark: #4a2c2a; --teak-light: #8c5b4f; --felt-green: #004d25; --gold-accent: #daa520; --light-text: #f5f5dc; --parchment-bg: #D2B48C; --dark-text: #4a2c2a; --busted-red: #c70039; }
-body { font-family: 'Georgia', 'Times New Roman', Times, serif; background-color: var(--teak-dark); background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); padding: 15px; margin: 0; height: 100vh; box-sizing: border-box; overflow: hidden; color: var(--light-text); }
+body { 
+    font-family: 'Georgia', 'Times New Roman', Times, serif; 
+    background-color: var(--teak-dark); 
+    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); 
+    padding: 15px; 
+    margin: 0; 
+    /* --- BUG FIX --- */
+    /* Changed height to min-height */
+    min-height: 100vh; 
+    box-sizing: border-box; 
+    /* Removed overflow: hidden to allow vertical scrolling */
+    color: var(--light-text); 
+}
 h1, h2, h3 { color: var(--gold-accent); }
 
 /* --- RETAINED: Join & Lobby Screens --- */
@@ -83,6 +104,9 @@ h1, h2, h3 { color: var(--gold-accent); }
     background-color: rgba(0, 0, 0, 0.2);
     border-radius: 8px;
     box-sizing: border-box;
+    /* --- BUG FIX --- */
+    /* Added explicit flex-basis to ensure grow/shrink works correctly */
+    flex-basis: 0;
 }
 .river-suit-zone {
     padding: 2px;
@@ -311,8 +335,10 @@ button:hover { background-color: #ffc400; }
 
 /* --- RETAINED: Mobile Responsive Styles --- */
 @media (max-width: 850px) {
+    /* --- BUG FIX --- */
+    /* Changed body height to auto to respect scrolling */
     body { height: auto; min-height: 100vh; }
-    #game-board { flex-direction: column; height: 100%; }
+    #game-board { flex-direction: column; height: auto; }
     #mobile-scroll-container { display: flex; width: 300%; overflow-x: scroll; scroll-snap-type: x mandatory; }
     .game-column { width: 100%; flex-shrink: 0; scroll-snap-align: start; padding: 10px; box-sizing: border-box; }
     #center-column { order: 0; height: auto; } /* Let center column be auto-height on mobile */
