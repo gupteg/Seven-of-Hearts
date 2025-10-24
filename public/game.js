@@ -158,8 +158,13 @@ window.addEventListener('DOMContentLoaded', () => {
     socket.on('joinSuccess', (playerId) => {
         myPersistentPlayerId = playerId;
         sessionStorage.setItem('sevenOfHeartsPlayerId', playerId);
-        document.getElementById('join-screen').style.display = 'none';
-        document.getElementById('lobby-screen').style.display = 'block';
+        // --- BUG FIX: This check is for rejoining the LOBBY ---
+        // If we are rejoining a game, 'updateGameState' will handle the screen switch.
+        // If we are joining the lobby, this is correct.
+        if (!window.gameState) {
+            document.getElementById('join-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'block';
+        }
     });
 
     socket.on('joinFailed', (message) => {
@@ -176,7 +181,22 @@ window.addEventListener('DOMContentLoaded', () => {
         location.reload();
     });
 
+    // --- BUG FIX: Added forceDisconnect handler ---
+    socket.on('forceDisconnect', () => {
+        // Kicked by host or hard reset
+        sessionStorage.removeItem('sevenOfHeartsPlayerId');
+        sessionStorage.removeItem('sevenOfHeartsPlayerName');
+        myPersistentPlayerId = null;
+        myPersistentPlayerName = null;
+        // Reload the page, which will put user at the join screen
+        location.reload();
+    });
+
     socket.on('lobbyUpdate', (players) => {
+        // This event signals a return to lobby
+        document.getElementById('game-board').style.display = 'none';
+        document.getElementById('join-screen').style.display = 'none';
+        document.getElementById('lobby-screen').style.display = 'block';
         renderLobby(players);
     });
 
@@ -188,6 +208,12 @@ window.addEventListener('DOMContentLoaded', () => {
     socket.on('updateGameState', (gs) => {
         console.log('Received GameState:', gs);
         window.gameState = gs;
+        
+        // --- BUG FIX: Add screen transition for reconnect ---
+        document.getElementById('join-screen').style.display = 'none';
+        document.getElementById('lobby-screen').style.display = 'none';
+        document.getElementById('game-board').style.display = 'flex';
+        // --- END BUG FIX ---
         
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
         if (!me) return;
@@ -213,17 +239,17 @@ window.addEventListener('DOMContentLoaded', () => {
         if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
         lobbyReturnInterval = setInterval(() => {
              document.getElementById('game-over-modal').classList.add('hidden');
-             document.getElementById('game-board').style.display = 'none';
-             document.getElementById('lobby-screen').style.display = 'block';
+             // --- BUG FIX: Do NOT show lobby, wait for lobbyUpdate ---
+             // document.getElementById('game-board').style.display = 'none';
+             // document.getElementById('lobby-screen').style.display = 'block';
              isInitialGameRender = true;
              clearInterval(lobbyReturnInterval);
         }, 10000);
     });
 
-    socket.on('hardReset', () => {
-        sessionStorage.clear();
-        location.reload();
-    });
+    // --- BUG FIX: This handler is now 'forceDisconnect' ---
+    // socket.on('hardReset', () => { ... });
+
     
     socket.on('youWereMarkedAFK', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
@@ -240,7 +266,16 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderLobby(players) {
         const playerList = document.getElementById('player-list');
         const me = players.find(p => p.playerId === myPersistentPlayerId);
-        if (!me) { playerList.innerHTML = '<p>Joining...</p>'; return; }
+        
+        if (!me) { 
+            // This can happen if host resets and we refresh
+            document.getElementById('join-screen').style.display = 'block';
+            document.getElementById('lobby-screen').style.display = 'none';
+            sessionStorage.removeItem('sevenOfHeartsPlayerId'); // Clear invalid ID
+            myPersistentPlayerId = null;
+            return; 
+        }
+
         playerList.innerHTML = '';
         players.forEach(p => {
             const li = document.createElement('li');
@@ -249,9 +284,12 @@ window.addEventListener('DOMContentLoaded', () => {
             } else if (!p.active) { status = '<span class="player-status-badge reconnecting">(Offline)</span>';
             } else if (p.isReady) { status = '<span style="color: green;">✅ Ready</span>';
             } else { status = '<span style="color: #b00;">❌ Not Ready</span>'; }
+            
+            // --- BUG FIX: Kick buttons now work ---
             li.innerHTML = `<span>${p.name} ${status}</span> ${(me && me.isHost && p.playerId !== me.playerId) ? `<button class="kick-btn danger-btn" data-player-id="${p.playerId}">Kick</button>` : ''}`;
             playerList.appendChild(li);
         });
+
         if (me && me.isHost) {
             document.getElementById('player-lobby-actions').style.display = 'none';
             document.getElementById('host-lobby-actions').style.display = 'block';
@@ -378,7 +416,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const latestLog = gs.logHistory[gs.logHistory.length - 1] || "Game Started.";
+        const latestLog = gs.logHistory[0] || "Game Started."; // Log is prepended
         
         if (currentPlayer.playerId === me.playerId) {
             banner.textContent = `YOUR TURN. (${latestLog})`;
@@ -411,7 +449,8 @@ window.addEventListener('DOMContentLoaded', () => {
             content.innerHTML = "<div>No log entries yet.</div>";
             return;
         }
-        content.innerHTML = logHistory.slice().reverse().map(entry => `<div>${entry}</div>`).join('');
+        // Logs are already pre-sorted, just join them
+        content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
     function createCardImageElement(card) {
@@ -437,43 +476,30 @@ window.addEventListener('DOMContentLoaded', () => {
         return img;
     }
     
-    // --- BUG FIX: Corrected "Smart River" Rendering Logic ---
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
-        
-        // TODO: This function needs to be updated for 2-deck logic
         
         const suitsToRender = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
         const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
         suitsToRender.forEach(suit => {
-            // NOTE: Server state uses "Hearts", "Diamonds", etc.
             const layout = boardState[suit];
             const row = document.createElement('div');
             row.className = 'river-row';
 
             if (!layout) {
-                 // Suit not started
                  row.innerHTML = `<div class="river-placeholder">${suit}</div>`;
             } else {
-                // Server state { low: 7, high: 7 } means ONLY 7 is played
-                // Server state { low: 6, high: 8 } means 6, 7, 8 are played
-                
-                // --- This is the fix ---
-                // The server's `low` and `high` are the *actual* min/max cards played
-                const lowRankVal = layout.low; // e.g., 6
-                const highRankVal = layout.high; // e.g., 8
+                const lowRankVal = layout.low; 
+                const highRankVal = layout.high;
 
-                // Loop from the lowest card value to the highest
                 for (let r = lowRankVal; r <= highRankVal; r++) {
-                    // Find rank string (e.g., 7 -> '7', 13 -> 'K')
                     const rankStr = allRanks[r-1];
                     if (!rankStr) continue;
                     
                     const cardImg = createRiverCardImageElement(suit, rankStr);
                     
-                    // "Smart" visible logic: Show 7, the lowest card, and the highest card
                     if (rankStr === '7' || r === lowRankVal || r === highRankVal) {
                         cardImg.classList.add('visible');
                     }
@@ -484,8 +510,6 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-
-    // --- BUG FIX: Corrected Client-Side Validation Logic ---
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
         if (!hand) return [];
@@ -496,21 +520,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         for (const card of hand) {
-            // NOTE: Server state uses "Hearts", "Diamonds", etc.
             const layout = boardState[card.suit];
             const cardRankVal = RANK_ORDER[card.rank];
 
-            // Rule 1: Can play a 7 if that suit hasn't been started
             if (card.rank === '7') {
-                if (!layout) { // If layout doesn't exist, 7 is playable
+                if (!layout) { 
                     validMoves.push(card);
                 }
                 continue;
             }
             
-            // Rule 2: Can build
             if (layout) {
-                // Server logic: card is valid if it's one *outside* the current range
                 if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) {
                     validMoves.push(card);
                 }
@@ -558,7 +578,7 @@ window.addEventListener('DOMContentLoaded', () => {
             if (e.touches.length === 1) {
                 e.preventDefault();
                 pos1 = pos3 - e.touches[0].clientX;
-                pos2 = pos4 - e.clientY;
+                pos2 = pos4 - e.touches[0].clientY;
                 pos3 = e.touches[0].clientX;
                 pos4 = e.touches[0].clientY;
                 if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
