@@ -32,62 +32,14 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0,0,0,0.5);
 }
-
-/* --- JOIN SCREEN FIX --- */
-/* Apply specific styles ONLY to the player name input on the join screen */
-#join-screen #player-name-input {
-    font-size: 1.1em;
-    padding: 10px;
-    border-radius: 5px;
-    border: 2px solid var(--teak-dark);
-    width: 80%;
-    display: block; /* Ensure it takes its own line */
-    margin: 15px auto; /* Center it with top/bottom margin */
-    box-sizing: border-box; /* Keep box-sizing for consistency */
-}
-/* Style the host password input separately */
-#lobby-screen #host-password-input {
-    font-size: 1.1em;
-    padding: 10px;
-    border-radius: 5px;
-    border: 2px solid var(--teak-dark);
-    width: 100%; /* Make it full width within host controls */
-    box-sizing: border-box;
-    margin-bottom: 10px;
-}
-/* --- END JOIN SCREEN FIX --- */
-
+#player-name-input, #host-password-input { font-size: 1.1em; padding: 10px; border-radius: 5px; border: 2px solid var(--teak-dark); width: 80%; }
 #player-list { list-style: none; padding: 0; }
 #player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
 .kick-btn { font-size: 0.8em; padding: 3px 7px; }
 .game-settings { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin: 15px 0; text-align: left; }
 .setting-group { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
-.setting-group label { font-size: 1em; color: var(--light-text); margin-right: 5px; }
+.setting-group label { font-size: 1em; color: var(--light-text); }
 .setting-group input[type="radio"] { accent-color: var(--gold-accent); }
-
-/* General lobby actions styling */
-.lobby-actions {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 20px;
-}
-/* Host actions container should stack its children */
-#host-lobby-actions {
-    flex-direction: column;
-    align-items: stretch; /* Make children take full width */
-}
-/* Ensure host controls within host actions stacks vertically */
-#host-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    align-items: stretch; /* Make buttons/input take full width */
-}
-/* Player actions container (single button) - default row is fine */
-#player-lobby-actions {
-    /* Uses default flex settings from .lobby-actions */
-}
 /* --- END: Join & Lobby --- */
 
 
@@ -95,12 +47,12 @@ body {
 #game-board {
     display: flex;
     gap: 15px;
-    height: calc(100vh - 30px);
+    height: calc(100vh - 30px); 
     max-height: calc(100vh - 30px);
 }
 
 #mobile-scroll-container {
-    display: contents;
+    display: contents; 
 }
 
 /* Left Column: Player Dashboard */
@@ -109,7 +61,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    overflow: hidden;
+    overflow: hidden; 
     max-height: 100%;
 }
 
@@ -124,7 +76,7 @@ body {
     border-radius: 15px;
     padding: 15px;
     box-sizing: border-box;
-    overflow-y: auto;
+    overflow-y: auto; 
     max-height: 100%;
 }
 
@@ -132,7 +84,7 @@ body {
     border-bottom: 2px solid var(--teak-light);
     padding-bottom: 5px;
     margin-bottom: 5px;
-    flex-shrink: 0;
+    flex-shrink: 0; 
 }
 .panel-header h4 {
     margin: 0;
@@ -149,7 +101,7 @@ body {
     padding: 15px;
     text-align: center;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    flex-shrink: 0;
+    flex-shrink: 0; 
 }
 #my-info-panel h3 { margin: 0 0 10px 0; color: var(--light-text); }
 .my-score-box { font-size: 1.2em; }
@@ -159,7 +111,7 @@ body {
 #my-hand-container {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: center; 
     gap: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.2);
@@ -167,8 +119,8 @@ body {
     flex-grow: 1;
     flex-shrink: 1;
     overflow-y: auto;
-    min-height: 100px;
-    align-content: flex-start;
+    min-height: 100px; 
+    align-content: flex-start; 
 }
 
 /* Action Buttons */
@@ -176,8 +128,8 @@ body {
     display: flex;
     gap: 10px;
     justify-content: center;
-    flex-shrink: 0;
-    padding: 5px 0;
+    flex-shrink: 0; 
+    padding: 5px 0; 
 }
 .action-btn {
     padding: 12px 20px;
@@ -205,7 +157,7 @@ body {
     flex-grow: 1;
     flex-shrink: 1;
     overflow-y: auto;
-    min-height: 100px;
+    min-height: 100px; 
     align-content: flex-start;
     background: rgba(0,0,0,0.1);
     padding: 10px;
@@ -220,7 +172,7 @@ body {
     padding: 10px;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
     position: relative;
-    height: 90px;
+    height: 90px; 
     box-sizing: border-box;
 }
 .other-player-tile.active-player {
@@ -235,45 +187,25 @@ body {
 
 
 /* --- SVG Card Styles --- */
-.card-wrapper {
-    position: relative;
+.card-img {
     width: 100px;
     height: 140px;
-}
-.card-img {
-    width: 100%;
-    height: 100%;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
     cursor: not-allowed;
-    display: block;
 }
-.deck-indicator {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    background-color: rgba(0, 0, 0, 0.7);
-    color: white;
-    font-size: 0.8em;
-    font-weight: bold;
-    padding: 1px 4px;
-    border-radius: 3px;
-    line-height: 1;
-    z-index: 5;
-}
-
-.card-wrapper:hover .card-img {
+.card-img:hover {
     transform: translateY(-10px);
     z-index: 10;
 }
-.card-wrapper.playable-card .card-img {
+.card-img.playable-card {
     cursor: pointer;
     box-shadow: 0 0 20px var(--gold-accent);
     border: 3px solid var(--gold-accent);
-    box-sizing: border-box;
+    box-sizing: border-box; 
 }
-.card-wrapper.playable-card:hover .card-img {
+.card-img.playable-card:hover {
     transform: translateY(-10px) scale(1.05);
 }
 /* --- END: SVG Card Styles --- */
@@ -299,24 +231,26 @@ body {
     flex-grow: 1;
 }
 
+/* --- VISUAL ENHANCEMENT FIX --- */
 .river-row {
     background: rgba(0,0,0,0.2);
     border-radius: 8px;
     padding: 10px;
     display: flex;
     align-items: center;
-    min-height: 80px;
-    overflow-x: hidden;
-    justify-content: center;
-    gap: 2px;
+    min-height: 80px; /* Reduced height */
+    /* This is the fix: */
+    overflow-x: hidden; /* No horizontal scroll */
+    justify-content: center; /* Center the cards/placeholders */
+    gap: 2px; /* Tighter gap */
 }
 .river-card {
-    width: 50px;
-    height: 70px;
+    width: 50px; /* Reduced width */
+    height: 70px; /* Reduced height (1.4 ratio) */
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
-    flex-shrink: 0;
+    flex-shrink: 0; 
 }
 
 .river-placeholder {
@@ -329,8 +263,8 @@ body {
 }
 
 .river-card-placeholder {
-    width: 50px;
-    height: 70px;
+    width: 50px; /* Match card size */
+    height: 70px; /* Match card size */
     border-radius: 4px;
     border: 2px dashed var(--gold-accent);
     box-sizing: border-box;
@@ -339,12 +273,12 @@ body {
     justify-content: center;
     color: var(--gold-accent);
     font-family: Arial, sans-serif;
-    font-size: 1.2em;
+    font-size: 1.2em; /* Reduced font size */
     font-weight: bold;
-    flex-shrink: 0;
+    flex-shrink: 0; 
     opacity: 0.6;
 }
-/* --- END: Table & River Styles --- */
+/* --- END: VISUAL ENHANCEMENT FIX --- */
 
 
 /* --- Modal Styles --- */
@@ -459,8 +393,8 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     .game-column {
         flex: 0 0 100%;
         width: 100%;
-        max-height: none;
-        min-height: 100%;
+        max-height: none; 
+        min-height: 100%; 
         box-sizing: border-box;
         padding: 10px;
         scroll-snap-align: center;
@@ -493,15 +427,9 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     }
     .dot.active { background-color: white; }
 
-    /* Mobile card wrapper */
-    .card-wrapper {
+    .card-img {
         width: 80px;
         height: 112px;
-    }
-    .deck-indicator {
-        font-size: 0.7em;
-        bottom: 3px;
-        right: 3px;
     }
     .river-card {
         width: 50px;
