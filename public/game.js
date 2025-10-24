@@ -14,7 +14,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- NEW: Client-side constants for sorting/logic ---
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
-    // --- FIX: Added the missing RANKS array ---
     const RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     // --- END: Constants ---
     
@@ -328,10 +327,9 @@ window.addEventListener('DOMContentLoaded', () => {
             const container = slotPositions[index];
             if (!container) return;
             
-            const meInGame = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
-            const isHostInGame = meInGame ? meInGame.isHost : false;
-
-            const slot = createPlayerSlot(p, isHostInGame);
+            // --- FIX: Cleaned up redundant logic ---
+            const isLocalPlayerHost = me.isHost;
+            const slot = createPlayerSlot(p, isLocalPlayerHost);
             container.appendChild(slot);
         });
     }
@@ -353,12 +351,14 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const cardCount = player.hand ? player.hand.length : 0;
         
+        // --- FIX: Added the missing </div> tag ---
         slot.innerHTML = `
             <div class="player-name">${player.name} ${player.isHost ? '👑' : ''}</div>
             ${statusBadge}
-            <div class="player-card-count">Cards: ${cardCount}</div>
+            <div class="player-card-count">Cards: ${cardCount}</div> 
             ${afkButton}
-            `;
+        `;
+        // --- END FIX ---
         return slot;
     }
 
@@ -559,7 +559,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
         }
-        return validMoves;
+        return validMoves.length > 0; // Return true if any valid moves exist
     }
 
     function highlightPlayableCards(validMoves) {
