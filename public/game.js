@@ -5,7 +5,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
     let myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
     
-    // --- NEW: Card Naming Maps for SVGs ---
+    // --- Card Naming Maps for SVGs ---
     const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
     const RANK_MAP = {
         'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -14,7 +14,6 @@ window.addEventListener('DOMContentLoaded', () => {
     };
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
-    // --- END: Card Naming Maps ---
     
     let isInitialGameRender = true;
     let pauseCountdownInterval;
@@ -44,7 +43,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupLobbyEventListeners() {
-        // ... (This function remains unchanged from your previous file) ...
         document.getElementById('ready-btn').addEventListener('click', () => {
             socket.emit('setPlayerReady', true);
         });
@@ -66,7 +64,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupModalAndButtonListeners() {
-        // --- NEW: Game Log Modal ---
         const logModal = document.getElementById('game-log-modal');
         document.getElementById('show-logs-btn').addEventListener('click', () => {
             renderLogModal(window.gameState.logHistory || []);
@@ -79,10 +76,6 @@ window.addEventListener('DOMContentLoaded', () => {
             logModal.classList.add('hidden');
         });
 
-        // --- RETAINED: Other Modals ---
-        document.getElementById('scoreboard-btn')?.addEventListener('click', () => { // Optional chaining in case it's removed
-            document.getElementById('scoreboard-modal').classList.remove('hidden');
-        });
         document.getElementById('scoreboard-modal-close').addEventListener('click', () => {
             document.getElementById('scoreboard-modal').classList.add('hidden');
         });
@@ -113,15 +106,12 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lobby-screen').style.display = 'block';
             isInitialGameRender = true;
         });
-
-        // Pass Button
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
         });
     }
 
     function setupDynamicEventListeners() {
-        // Lobby Kick
         document.getElementById('player-list').addEventListener('click', (e) => {
             if (e.target.classList.contains('kick-btn')) {
                 const playerIdToKick = e.target.dataset.playerId;
@@ -129,7 +119,6 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // --- NEW: Listener for the new Other Players container ---
         document.getElementById('other-players-container').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
              if (afkBtn) {
@@ -138,11 +127,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Card click listener (now looks for .card-img)
         document.getElementById('my-hand-container').addEventListener('click', (e) => {
             const cardEl = e.target.closest('.card-img');
             if (cardEl && cardEl.classList.contains('playable-card')) {
-                // Find the card object from the element's dataset-id
                 const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
                 const cardData = me.hand.find(c => c.id === cardEl.dataset.id);
                 if (cardData) {
@@ -151,15 +138,13 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // --- NEW: Mobile Swipe Listener (from Judgment) ---
         const scrollContainer = document.getElementById('mobile-scroll-container');
         const pageIndicator = document.getElementById('page-indicator');
         if (scrollContainer && pageIndicator) {
             scrollContainer.addEventListener('scroll', () => {
                 const pageWidth = scrollContainer.offsetWidth;
-                // We only have 2 pages (0 and 1)
                 const currentPage = Math.round(scrollContainer.scrollLeft / pageWidth);
-                pageIndicator.innerHTML = ''; // Clear dots
+                pageIndicator.innerHTML = '';
                 for (let i = 0; i < 2; i++) {
                     const dot = document.createElement('div');
                     dot.className = 'dot';
@@ -170,7 +155,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- RETAINED: Core Client-Side Handlers ---
     socket.on('joinSuccess', (playerId) => {
         myPersistentPlayerId = playerId;
         sessionStorage.setItem('sevenOfHeartsPlayerId', playerId);
@@ -198,28 +182,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
     socket.on('gameStarted', () => {
         document.getElementById('lobby-screen').style.display = 'none';
-        document.getElementById('game-board').style.display = 'flex'; // Use flex
+        document.getElementById('game-board').style.display = 'flex';
     });
     
-    // --- UPDATED: Main GameState Handler ---
     socket.on('updateGameState', (gs) => {
         console.log('Received GameState:', gs);
-        window.gameState = gs; // Store for debugging
+        window.gameState = gs;
         
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
-        if (!me) return; // Not in this game
+        if (!me) return;
 
-        // --- NEW: Call all new render functions ---
         renderMyInfo(me);
         renderMyHand(me, gs);
         renderMyActions(me, gs);
         renderOtherPlayers(gs.players, me, gs.currentPlayerId);
         renderGameStatusBanner(gs, me);
         renderRiver(gs.boardState, gs.settings.deckCount);
-        // --- END: New calls ---
 
         if (isInitialGameRender) {
-            // Default to Page 1 (Dashboard) on mobile
             const mobileScroll = document.getElementById('mobile-scroll-container');
             if (window.innerWidth <= 850 && mobileScroll) {
                 mobileScroll.scrollTo({ left: 0, behavior: 'auto' });
@@ -229,7 +209,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     
     socket.on('gameEnded', ({ logHistory }) => {
-        // ... (This function remains unchanged) ...
         renderGameOver(logHistory);
         if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
         lobbyReturnInterval = setInterval(() => {
@@ -250,22 +229,15 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
     });
 
-    // --- REFINED: Warning Handler ---
-    // This now handles both public warnings and private modal-worthy warnings
     socket.on('warning', (data) => {
-        // If server sends an object like { title: "X", message: "Y" }
         if (typeof data === 'object' && data.title) {
             showWarning(data.title, data.message);
         } else {
-            // Otherwise, show a generic alert
             showWarning('Alert', data);
         }
     });
 
-
-    // --- RETAINED: Lobby Rendering Function (Unchanged) ---
     function renderLobby(players) {
-        // ... (This function remains unchanged from your previous file) ...
         const playerList = document.getElementById('player-list');
         const me = players.find(p => p.playerId === myPersistentPlayerId);
         if (!me) { playerList.innerHTML = '<p>Joining...</p>'; return; }
@@ -299,7 +271,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- RETAINED: Utility Functions (from Judgment) ---
     function showWarning(title, text) {
         document.getElementById('warning-modal-title').textContent = title;
         document.getElementById('warning-modal-text').textContent = text;
@@ -307,7 +278,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     function renderGameOver(logHistory) {
-        // ... (This function remains unchanged) ...
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
@@ -316,16 +286,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderScoreboard(players) {
-        // TODO: This needs to be completely rewritten for Seven of Hearts scoring
         const scoreboard = document.getElementById('scoreboard-content');
         scoreboard.innerHTML = '<p>Scoring logic not yet implemented.</p>';
     }
 
-    // --- NEW: Game Board Render Functions (Dashboard) ---
-    
     function renderMyInfo(me) {
         document.getElementById('my-name').textContent = `${me.name} (You) ${me.isHost ? '👑' : ''}`;
-        document.getElementById('my-score').textContent = me.score || 0; // TODO: Use real score
+        document.getElementById('my-score').textContent = me.score || 0;
     }
 
     function renderMyHand(me, gs) {
@@ -334,7 +301,6 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (!me || !me.hand) return;
 
-        // Sort the hand
         const sortedHand = me.hand.sort((a, b) => {
             if (SUITS_ORDER[a.suit] !== SUITS_ORDER[b.suit]) {
                 return SUITS_ORDER[a.suit] - SUITS_ORDER[b.suit];
@@ -342,12 +308,12 @@ window.addEventListener('DOMContentLoaded', () => {
             return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
         });
         
-        // Get valid moves
         const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
         const validMoveIds = new Set(validMoves.map(card => card.id));
 
         sortedHand.forEach(card => {
             const cardEl = createCardImageElement(card);
+            // Only add playable-card class if it's my turn
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId) {
                 cardEl.classList.add('playable-card');
             }
@@ -364,7 +330,6 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
             passBtn.style.display = 'none';
         }
-        // TODO: Add host-specific buttons
     }
 
     function renderOtherPlayers(players, me, currentPlayerId) {
@@ -400,12 +365,9 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- NEW: Game Board Render Functions (Table) ---
-
     function renderGameStatusBanner(gs, me) {
         const banner = document.getElementById('game-status-banner');
         if (gs.isPaused) {
-            // This is complex, so it gets its own function
             updatePauseBanner(gs);
             return;
         }
@@ -421,7 +383,6 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (currentPlayer.playerId === me.playerId) {
             banner.textContent = `YOUR TURN. (${latestLog})`;
-            // Special private warning for 7 of Hearts
             if (gs.isFirstMove && !me.hand.find(c => c.rank === '7' && c.suit === 'Hearts')) {
                  showWarning("Your Turn", "You do not have the 7 of Hearts. You must pass.");
             } else if (gs.isFirstMove) {
@@ -462,9 +423,10 @@ window.addEventListener('DOMContentLoaded', () => {
         img.className = 'card-img';
         const suit = SUIT_MAP[card.suit];
         const rank = RANK_MAP[card.rank];
-        img.src = `/public/assets/cards/${suit}_${rank}.svg`;
+        // --- BUG FIX: Removed "/public" from the path ---
+        img.src = `/assets/cards/${suit}_${rank}.svg`;
         img.alt = `${card.rank} of ${card.suit}`;
-        img.dataset.id = card.id; // Crucial for click/highlight logic
+        img.dataset.id = card.id;
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
         return img;
@@ -478,89 +440,42 @@ window.addEventListener('DOMContentLoaded', () => {
         img.className = 'river-card';
         const suitName = SUIT_MAP[suit];
         const rankName = RANK_MAP[rank];
-        img.src = `/public/assets/cards/${suitName}_${rankName}.svg`;
+        // --- BUG FIX: Removed "/public" from the path ---
+        img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
         return img;
     }
     
-    // --- NEW: "Smart River" Rendering Logic ---
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
         
-        // Define all suits for 1 or 2 decks
+        // TODO: This function needs to be updated for 2-deck logic
+        // For now, it will render the 4 base suits
+        
         const suitsToRender = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
-        if (numDecks === 2) {
-             suitsToRender.push('Hearts', 'Diamonds', 'Clubs', 'Spades');
-        }
-        
-        suitsToRender.forEach((suit, index) => {
-            // TODO: In 2-deck, we need to get the state for 'Hearts-1', 'Hearts-2'
-            // This requires a server-side change. For now, we assume 1 deck logic.
-            const layout = boardState[suit]; 
-            
-            const row = document.createElement('div');
-            row.className = 'river-row';
-            
-            if (!layout) {
-                // Suit hasn't been started
-                row.innerHTML = `<div class="river-placeholder">${suit}</div>`;
-            } else {
-                // "Smart River" logic
-                const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-                const lowRankVal = RANK_ORDER[layout.lowRank] || 1; // e.g., 'A' -> 1
-                const highRankVal = RANK_ORDER[layout.highRank] || 13; // e.g., 'K' -> 13
-
-                // Get all cards played in this suit
-                const playedRanks = [];
-                for (let r = lowRankVal; r <= highRankVal; r++) {
-                    // Find rank string (e.g., 1 -> 'A')
-                    const rankStr = Object.keys(RANK_ORDER).find(key => RANK_ORDER[key] === r);
-                    if (rankStr) {
-                        playedRanks.push(rankStr);
-                    }
-                }
-
-                // Render the cards
-                playedRanks.forEach(rank => {
-                    const cardImg = createRiverCardImageElement(suit, rank);
-                    
-                    // Show 7, low, and high cards visibly
-                    if (rank === '7' || rank === layout.lowRank || rank === layout.highRank) {
-                        cardImg.classList.add('visible');
-                    }
-                    row.appendChild(cardImg);
-                });
-            }
-            riverContainer.appendChild(row);
-        });
-
-        // --- HACK/TODO: Fix server-side boardState ---
-        // The *current* boardState is { hearts: { low: 6, high: 8 } }
-        // This is not what we agreed on. It should be { hearts: { lowRank: '6', highRank: '8' } }
-        // I will write a *temporary* adapter for the old boardState to make the UI work.
-        // PLEASE UPDATE YOUR SERVER to send the new boardState format.
-        
-        riverContainer.innerHTML = ''; // Clear again
-        const tempSuits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
         const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
-        tempSuits.forEach(suit => {
+        suitsToRender.forEach(suit => {
             const layout = boardState[suit.toLowerCase()]; // e.g., boardState.hearts
             const row = document.createElement('div');
             row.className = 'river-row';
 
             if (!layout || (layout.low === 7 && layout.high === 7)) {
-                // Suit hasn't been started (or only placeholder 7 is there)
                  row.innerHTML = `<div class="river-placeholder">${suit}</div>`;
             } else {
-                // Ranks are 1-based (A=1), allRanks is 0-based
+                // Ranks are 1-based, allRanks is 0-based
                 const lowRankIndex = layout.low - 1; // e.g., 6 becomes index 5 ('6')
                 const highRankIndex = layout.high - 1; // e.g., 8 becomes index 7 ('8')
 
                 for (let i = lowRankIndex; i <= highRankIndex; i++) {
                     const rank = allRanks[i];
+                    if (!rank) continue; // Should not happen, but a good safeguard
                     const cardImg = createRiverCardImageElement(suit, rank);
+                    
+                    // Show 7, low, and high cards visibly
+                    // lowRankIndex is the '6' (e.g., index 5)
+                    // highRankIndex is the '8' (e.g., index 7)
                     if (rank === '7' || i === lowRankIndex || i === highRankIndex) {
                         cardImg.classList.add('visible');
                     }
@@ -569,11 +484,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             riverContainer.appendChild(row);
         });
-        // --- END HACK ---
     }
 
 
-    // --- NEW: Client-side validation ---
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
         if (!hand) return [];
@@ -590,7 +503,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Rule 1: Can play a 7 if that suit hasn't been started
             if (card.rank === '7') {
-                // layout.low === 7 means only the placeholder 7 is there
                 if (!layout || layout.low === 7) { 
                     validMoves.push(card);
                 }
@@ -599,7 +511,8 @@ window.addEventListener('DOMContentLoaded', () => {
             
             // Rule 2: Can build
             if (layout) {
-                if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) {
+                // --- BUG FIX: Changed from (layout.low - 1) to (layout.low) ---
+                if (cardRankVal === layout.low || cardRankVal === layout.high) {
                     validMoves.push(card);
                 }
             }
@@ -607,9 +520,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return validMoves;
     }
     
-    // --- RETAINED: Draggable Modal Utility (from Judgment) ---
     function makeDraggable(modal) {
-        // ... (This function remains unchanged from your previous file) ...
         const modalContent = modal.querySelector('.modal-content');
         const header = modal.querySelector('.modal-header');
         if (!header) return;
@@ -667,6 +578,5 @@ window.addEventListener('DOMContentLoaded', () => {
         header.addEventListener('touchstart', dragTouchStart, { passive: false });
     }
 
-    // Make all modals draggable
     document.querySelectorAll('.modal').forEach(makeDraggable);
 });
