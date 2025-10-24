@@ -51,48 +51,57 @@
 
         <p id="host-message" style="display: none;">(Waiting for the host to start the game)</p>
     </div>
-
     <div id="game-board" style="display: none;">
-        <div id="game-status-banner" style="display: none;"></div>
-        <div id="action-required-banner" style="display: none;"></div>
-
+        
         <div id="mobile-scroll-container">
-            <div id="left-column" class="game-column">
-                <div id="player-slots-left" class="player-slots-container">
-                    </div>
+
+            <div id="dashboard-column" class="game-column">
                 
-                <div id="game-log-ticker" class="info-tile">
-                    <h4>Recent Moves</h4>
-                    <ul id="game-log-list">
-                        </ul>
-                </div>
+                <div id="my-info-panel" class="info-panel">
+                    <h3 id="my-name">Player Name</h3>
+                    <div class="my-score-box">
+                        <span>Score:</span>
+                        <span id="my-score" class="score-value">0</span>
+                    </div>
                 </div>
 
-            <div id="center-column" class="game-column">
-                <div id="player-slots-top" class="player-slots-container horizontal-players">
+                <div class="panel-header"><h4>My Hand</h4></div>
+                <div id="my-hand-container">
                     </div>
+
+                <div id="my-actions-panel">
+                    <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
+                    <button id="show-logs-btn" class="action-btn secondary-btn">Show Logs</button>
+                    </div>
+
+                <div class="panel-header"><h4>Other Players</h4></div>
+                <div id="other-players-container">
+                    </div>
+
+            </div> <div id="table-column" class="game-column">
                 
-                <div id="river-container" class="river-container">
-                    </div>
-                <div id="player-slots-bottom" class="player-slots-container horizontal-players">
-                    </div>
+                <div id="game-status-banner">
+                    Waiting for game to start...
+                </div>
                 
-                <div id="player-hand-container">
-                    <div id="my-hand" class="hand">
-                        </div>
-                    <div id="player-actions">
-                        <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
+                <div id="river-container">
                     </div>
-                    </div>
+
+            </div> </div> <div id="page-indicator"></div>
+
+    </div>
+    <div id="game-log-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Full Game Log</h2>
+                <button id="game-log-modal-close" class="close-btn">&times;</button>
             </div>
-
-            <div id="right-column" class="game-column">
-                <div id="player-slots-right" class="player-slots-container">
-                    </div>
-                <button id="scoreboard-btn" class="info-tile-btn">Scoreboard</button>
+            <div class="modal-scrollable-content" id="game-log-modal-content">
+                </div>
+            <div class="modal-actions">
+                <button id="game-log-modal-ok-btn" class="confirm-btn">OK</button>
             </div>
         </div>
-        <div id="page-indicator"></div>
     </div>
 
     <div id="scoreboard-modal" class="modal hidden">
@@ -101,7 +110,7 @@
                 <h2>Scoreboard</h2>
                 <button id="scoreboard-modal-close" class="close-btn">&times;</button>
             </div>
-            <div id="scoreboard-content">
+            <div id="scoreboard-content" class="modal-scrollable-content">
                 </div>
         </div>
     </div>

@@ -1,274 +1,144 @@
-/* --- 3-COLUMN LAYOUT --- */
-#game-board { 
-    /* --- BUG FIX --- */
-    /* Changed height to min-height to allow the board to grow */
-    min-height: 100%; 
-    display: flex; 
-    gap: 15px; 
-    position: relative; 
+:root {
+    --teak-dark: #4a2c2a;
+    --teak-light: #8c5b4f;
+    --felt-green: #004d25;
+    --gold-accent: #daa520;
+    --light-text: #f5f5dc;
+    --parchment-bg: #D2B48C;
+    --dark-text: #4a2c2a;
+    --busted-red: #c70039;
 }
-#left-column { flex: 5; display: flex; flex-direction: column; position: relative; overflow-y: auto; gap: 15px; } /* Added gap */
 
-/* --- FIX: Added height: 100% and box-sizing --- */
-#center-column { 
-    flex: 4; 
-    display: flex; 
-    flex-direction: column; 
-    background-color: var(--felt-green); 
-    border: 10px solid var(--teak-light); 
-    border-radius: 15px; 
-    padding: 15px; 
-    /* --- BUG FIX --- */
-    /* Removed height: 100%. As a flex item, it will stretch automatically. */
-    /* This was the primary cause of the overflow. */
-    box-sizing: border-box; /* Include padding/border in the height calculation */
+body {
+    font-family: 'Georgia', 'Times New Roman', Times, serif;
+    background-color: var(--teak-dark);
+    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
+    padding: 15px;
+    margin: 0;
+    /* Use min-height to allow scrolling on long pages */
+    min-height: 100vh;
+    box-sizing: border-box;
+    color: var(--light-text);
+    /* Allow vertical scrolling */
+    overflow-y: auto;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
-/* --- END FIX --- */
 
-#right-column { flex: 3; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-#mobile-scroll-container { display: contents; } /* Behaves normally on desktop */
-#page-indicator { display: none; } /* Hidden on desktop */
-
-:root { --teak-dark: #4a2c2a; --teak-light: #8c5b4f; --felt-green: #004d25; --gold-accent: #daa520; --light-text: #f5f5dc; --parchment-bg: #D2B48C; --dark-text: #4a2c2a; --busted-red: #c70039; }
-body { 
-    font-family: 'Georgia', 'Times New Roman', Times, serif; 
-    background-color: var(--teak-dark); 
-    background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png'); 
-    padding: 15px; 
-    margin: 0; 
-    /* --- BUG FIX --- */
-    /* Changed height to min-height */
-    min-height: 100vh; 
-    box-sizing: border-box; 
-    /* Removed overflow: hidden to allow vertical scrolling */
-    color: var(--light-text); 
+/* --- RETAINED: Join & Lobby Screens (Minor style tweaks) --- */
+#join-screen, #lobby-screen {
+    text-align: center;
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: var(--teak-light);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
 }
-h1, h2, h3 { color: var(--gold-accent); }
-
-/* --- RETAINED: Join & Lobby Screens --- */
-#join-screen, #lobby-screen { text-align: center; max-width: 500px; margin: 50px auto; padding: 20px; background-color: var(--teak-light); border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
 #player-name-input, #host-password-input { font-size: 1.1em; padding: 10px; border-radius: 5px; border: 2px solid var(--teak-dark); width: 80%; }
 #player-list { list-style: none; padding: 0; }
 #player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
 .kick-btn { font-size: 0.8em; padding: 3px 7px; }
+.game-settings { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin: 15px 0; text-align: left; }
+.setting-group { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+.setting-group label { font-size: 1em; color: var(--light-text); }
+.setting-group input[type="radio"] { accent-color: var(--gold-accent); }
 /* --- END: Join & Lobby --- */
 
-/* --- NEW: Lobby Game Settings --- */
-.game-settings {
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    border-radius: 5px;
-    margin: 15px 0;
-    text-align: left;
-}
-.setting-group {
+
+/* --- NEW: 2-Column "Dashboard & Table" Layout --- */
+#game-board {
     display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
+    gap: 15px;
+    /* Use min-height to allow content to define height */
+    min-height: calc(100vh - 30px); /* Full viewport height minus body padding */
 }
-.setting-group label {
-    font-size: 1em;
-    color: var(--light-text);
+
+#mobile-scroll-container {
+    display: contents; /* Behaves as normal on desktop */
 }
-.setting-group input[type="radio"] {
-    accent-color: var(--gold-accent);
-}
-/* --- END: Lobby Game Settings --- */
 
-
-/* --- RETAINED: Game Board & Player Slots --- */
-#player-slots-left, #player-slots-right { display: flex; flex-direction: column; gap: 10px; }
-#player-slots-top, #player-slots-bottom { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-.player-slot { background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; padding: 10px; min-height: 80px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); display: flex; flex-direction: column; justify-content: space-between; position: relative; }
-.player-slot.active-player { border-color: var(--gold-accent); box-shadow: 0 0 15px var(--gold-accent); }
-.player-name { font-weight: bold; font-size: 1.1em; color: var(--light-text); }
-.player-status-badge { font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background-color: var(--busted-red); color: white; display: inline-block; margin-top: 5px; }
-.player-status-badge.reconnecting { background-color: #ff8c00; }
-.player-timer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.3; }
-.afk-btn { position: absolute; top: 5px; right: 5px; font-size: 0.8em; padding: 2px 4px; }
-.player-card-count { font-size: 1.2em; font-weight: bold; margin-top: 5px; }
-/* --- END: Player Slots --- */
-
-/* --- UPDATED: River (Game Area) Styles --- */
-.river-container {
+/* Left Column: Player Dashboard */
+#dashboard-column {
+    flex: 2; /* Takes 40% of space */
     display: flex;
     flex-direction: column;
-    gap: 5px; /* Tighter gap */
-    width: 100%;
-    flex-grow: 1; /* This will now work */
-    overflow-y: auto; /* This will now work */
-    min-height: 100px; /* Give it a minimum height */
-    padding: 10px;
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 8px;
-    box-sizing: border-box;
-    /* --- BUG FIX --- */
-    /* Added explicit flex-basis to ensure grow/shrink works correctly */
-    flex-basis: 0;
-}
-.river-suit-zone {
-    padding: 2px;
-    border-radius: 8px;
-}
-.river-layout {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    min-height: 60px; /* Mini card height */
-    position: relative; /* For overlapping */
-}
-.card-placeholder {
-    font-size: 1.2em;
-    color: var(--light-text);
-    opacity: 0.4;
-    font-family: Arial, sans-serif;
-}
-/* Mini-card for the river */
-.card-mini {
-    width: 40px;
-    height: 55px;
-    background: #fff;
-    border: 1px solid #777;
-    border-radius: 4px;
-    margin-left: -32px; /* Overlap */
-    position: relative;
-    box-shadow: -1px 0 3px rgba(0,0,0,0.2);
-    font-family: Arial, sans-serif;
-    font-weight: bold;
-    user-select: none;
-}
-.card-mini.red { color: #D90000; }
-.card-mini.black { color: #333; }
-.card-mini.anchor-7 {
-    margin-left: 5px;
-    margin-right: 5px;
-    z-index: 10;
-    transform: scale(1.1);
-    box-shadow: 0 0 10px var(--gold-accent);
-    border-color: var(--gold-accent);
-}
-/* Ensure first card in stack doesn't have overlap margin */
-.card-mini:first-child {
-    margin-left: 0;
-}
-.anchor-7 + .card-mini {
-    margin-left: -32px; /* Re-apply overlap after anchor */
-}
-.card-mini-rank {
-    font-size: 0.9em;
-    position: absolute;
-    top: 3px;
-    left: 4px;
-}
-.card-mini-suit {
-    font-size: 1.5em;
-    text-align: center;
-    line-height: 55px;
-}
-/* --- END: River Styles --- */
-
-
-/* --- NEW: Game Log Ticker Styles --- */
-#game-log-ticker {
-    /* .info-tile styles are already applied */
-    flex-shrink: 0; /* Prevents it from shrinking */
-}
-#game-log-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 5px 0 0 0;
-    font-size: 0.9em;
-    max-height: 120px; /* Show ~5-6 logs */
+    gap: 15px;
+    /* Allow dashboard to scroll if "other players" list is long */
     overflow-y: auto;
+    max-height: calc(100vh - 30px);
+}
+
+/* Right Column: Game Table */
+#table-column {
+    flex: 3; /* Takes 60% of space */
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background-color: var(--felt-green);
+    border: 10px solid var(--teak-light);
+    border-radius: 15px;
+    padding: 15px;
+    box-sizing: border-box;
+    /* Allow river to scroll */
+    overflow-y: auto;
+    max-height: calc(100vh - 30px);
+}
+
+.panel-header {
+    border-bottom: 2px solid var(--teak-light);
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+.panel-header h4 {
+    margin: 0;
+    color: var(--gold-accent);
+}
+/* --- END: 2-Column Layout --- */
+
+
+/* --- NEW: Dashboard Panel Styles --- */
+#my-info-panel {
+    background: var(--teak-light);
+    border: 3px solid var(--teak-dark);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+#my-info-panel h3 {
+    margin: 0 0 10px 0;
     color: var(--light-text);
 }
-#game-log-list li {
-    padding: 3px 0;
-    border-bottom: 1px solid rgba(245, 245, 220, 0.2);
+.my-score-box {
+    font-size: 1.2em;
 }
-#game-log-list li:last-child {
-    border-bottom: none;
-}
-/* --- END: Game Log Styles --- */
-
-
-/* --- UPDATED: Hand & Card Styles --- */
-#player-hand-container { 
-    position: relative;
-    flex-shrink: 0; /* --- Prevent hand from being squished */
-}
-.hand { 
-    display: flex; 
-    /* --- Changed center to flex-start --- */
-    justify-content: flex-start; 
-    align-items: flex-end; 
-    padding: 10px; 
-    min-height: 140px;
-    /* --- Added horizontal scroll --- */
-    overflow-x: auto;
-    padding-bottom: 5px; /* Room for scrollbar */
-}
-
-.card {
-    width: 80px;
-    height: 120px;
-    border: 1px solid #777;
-    border-radius: 8px;
-    background-color: white;
-    color: black;
-    position: relative;
-    margin-left: -40px;
-    box-shadow: -2px 0 5px rgba(0,0,0,0.3);
-    cursor: pointer;
-    transition: transform 0.2s ease, z-index 0.2s ease, box-shadow 0.2s ease;
-    font-family: Arial, sans-serif;
+.my-score-box .score-value {
+    font-size: 1.5em;
     font-weight: bold;
-    user-select: none;
-    flex-shrink: 0; /* --- ADDED: Prevent cards from squishing */
+    color: var(--gold-accent);
+    margin-left: 10px;
 }
-.card:first-child { margin-left: 0; }
-.card:hover { transform: translateY(-20px); z-index: 100; box-shadow: 0 5px 15px rgba(0,0,0,0.4); }
 
-/* Card colors */
-.card.red { color: #D90000; }
-.card.black { color: #333; }
-
-/* Card text and symbols */
-.card-rank { font-size: 1.8em; line-height: 1; }
-.card-rank.top { position: absolute; top: 8px; left: 8px; }
-.card-rank.bottom { position: absolute; bottom: 8px; right: 8px; transform: rotate(180deg); }
-.card-suit { font-size: 3.5em; text-align: center; line-height: 120px; /* Vertically center */ }
-
-/* Playable card highlight */
-.card.playable-card { 
-    border: 3px solid var(--gold-accent); 
-    box-shadow: 0 0 20px var(--gold-accent); 
-    cursor: pointer; /* Explicitly show pointer */
+/* Wrappable Hand Container (from Judgment) */
+#my-hand-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Center cards in the container */
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    min-height: 150px;
 }
-/* Make non-playable cards less prominent */
-.card:not(.playable-card) {
-    cursor: not-allowed;
-}
-.card:not(.playable-card):hover {
-    transform: none; /* Don't lift on hover if not playable */
-    z-index: 1;
-}
-/* --- END: Hand & Card --- */
 
-
-/* --- NEW: Player Action Button Styles --- */
-#player-actions {
-    position: absolute;
-    bottom: 15px;
-    right: 15px;
-    z-index: 100;
+#my-actions-panel {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
 }
 .action-btn {
-    padding: 15px 25px;
-    font-size: 1.2em;
+    padding: 12px 20px;
+    font-size: 1.1em;
     background-color: var(--gold-accent);
     color: var(--teak-dark);
     border: none;
@@ -277,45 +147,223 @@ h1, h2, h3 { color: var(--gold-accent); }
     font-weight: bold;
     font-family: 'Georgia', serif;
     box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    transition: background-color 0.2s ease, opacity 0.2s ease;
+    transition: all 0.2s ease;
 }
-.action-btn:hover {
-    background-color: #ffc400;
+.action-btn:hover:not(:disabled) { background-color: #ffc400; }
+.action-btn:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opacity: 0.7; }
+.action-btn.secondary-btn { background-color: var(--teak-light); color: var(--light-text); }
+.action-btn.secondary-btn:hover:not(:disabled) { background-color: var(--teak-dark); }
+
+/* Wrappable Other Players Container */
+#other-players-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
-.action-btn:disabled {
-    background-color: #888;
-    color: #bbb;
+.other-player-tile {
+    flex-grow: 1;
+    min-width: 150px; /* Each tile takes at least 150px */
+    background: var(--teak-light);
+    border: 3px solid var(--teak-dark);
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    position: relative;
+}
+.other-player-tile.active-player {
+    border-color: var(--gold-accent);
+    box-shadow: 0 0 15px var(--gold-accent);
+}
+.other-player-name {
+    font-weight: bold;
+    font-size: 1.1em;
+}
+.other-player-details {
+    font-size: 0.9em;
+    opacity: 0.9;
+    margin-top: 8px;
+}
+.other-player-tile .afk-btn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 0.8em;
+    padding: 2px 4px;
+}
+.other-player-status {
+    font-size: 0.8em;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background-color: var(--busted-red);
+    color: white;
+    display: inline-block;
+    margin-left: 5px;
+}
+/* --- END: Dashboard Styles --- */
+
+
+/* --- NEW: SVG Card Styles --- */
+.card-img {
+    width: 100px; /* Smaller cards for wrappable grid */
+    height: 140px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    transition: all 0.2s ease;
     cursor: not-allowed;
-    box-shadow: none;
-    opacity: 0.7;
 }
-/* --- END: Player Actions --- */
+.card-img:hover {
+    transform: translateY(-10px);
+    z-index: 10;
+}
+.card-img.playable-card {
+    cursor: pointer;
+    box-shadow: 0 0 20px var(--gold-accent);
+    border: 3px solid var(--gold-accent);
+}
+.card-img.playable-card:hover {
+    transform: translateY(-10px) scale(1.05);
+}
+/* --- END: SVG Card Styles --- */
 
 
-/* --- RETAINED: Banners & Info Tiles --- */
-#game-status-banner, #action-required-banner { padding: 15px; text-align: center; font-size: 1.1em; display: none; background-color: var(--parchment-bg); color: var(--dark-text); border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-#action-required-banner { background-color: var(--gold-accent); color: var(--teak-dark); font-weight: bold; }
-.info-tile { background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; padding: 15px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-.info-tile-btn { width: 100%; padding: 15px; font-size: 1.1em; background-color: var(--teak-light); border: 3px solid var(--teak-dark); border-radius: 10px; color: var(--light-text); font-family: 'Georgia', serif; cursor: pointer; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
-.info-tile-btn:hover { background-color: var(--teak-dark); }
-/* --- END: Banners & Info --- */
+/* --- NEW: Table & "Smart River" Styles --- */
+#game-status-banner {
+    padding: 15px;
+    text-align: center;
+    font-size: 1.2em;
+    font-weight: bold;
+    background-color: var(--parchment-bg);
+    color: var(--dark-text);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    flex-shrink: 0; /* Prevent shrinking */
+}
+
+#river-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-grow: 1;
+}
+.river-row {
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    min-height: 100px; /* Height of a river card + padding */
+}
+.river-card {
+    width: 70px; /* Smaller card for the river */
+    height: 98px;
+    border-radius: 5px;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.3);
+    /* This is the stacking magic */
+    margin-left: -55px; 
+    transition: all 0.2s ease;
+}
+.river-card.visible {
+    /* Visible cards (7, ends) are not stacked */
+    margin-left: 5px;
+    z-index: 10;
+    border: 2px solid var(--gold-accent);
+    transform: scale(1.05);
+}
+.river-card:first-child {
+    margin-left: 0; /* First card in a stack is never stacked */
+}
+.river-placeholder {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: var(--light-text);
+    opacity: 0.3;
+    text-align: center;
+    width: 100%;
+}
+/* --- END: Table & River Styles --- */
 
 
-/* --- RETAINED: Modal Styles --- */
-.modal { position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; }
-.modal.hidden { display: none; }
-.modal-content { background-color: var(--parchment-bg); color: var(--dark-text); margin: auto; padding: 20px; border: 5px solid var(--teak-light); border-radius: 15px; max-width: 90%; width: 500px; box-shadow: 0 5px 20px rgba(0,0,0,0.5); position: relative; /* For Draggable */ }
-.modal-header { padding: 10px 0; border-bottom: 2px solid var(--teak-light); display: flex; justify-content: space-between; align-items: center; cursor: move; }
+/* --- RETAINED: Modal Styles (Adapted from Judgment) --- */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; /* Allows click-through on backdrop */
+}
+.modal.hidden { display: none !important; }
+.modal:not(.hidden) { pointer-events: auto; }
+
+.modal-content {
+    background-color: var(--parchment-bg);
+    color: var(--dark-text);
+    padding: 20px;
+    border: 5px solid var(--teak-light);
+    border-radius: 15px;
+    max-width: 90%;
+    width: 500px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    position: relative;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh; /* Max height for scrollable content */
+}
+.modal-header {
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--teak-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
 .modal-header h2 { margin: 0; color: var(--teak-dark); }
 .close-btn { color: var(--teak-dark); font-size: 28px; font-weight: bold; cursor: pointer; }
 .close-btn:hover { color: #000; }
-.modal-actions { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Scrollable content wrapper (from Judgment) */
+.modal-scrollable-content {
+    overflow-y: auto;
+    padding: 15px 5px 15px 0;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    min-height: 100px; /* Give it some min-height */
+}
+/* Log modal specific styles */
+#game-log-modal-content div {
+    padding: 5px;
+    border-bottom: 1px solid var(--teak-light);
+}
+
+.modal-actions {
+    margin-top: 15px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
 /* --- END: Modals --- */
 
 
 /* --- RETAINED: Button Styles --- */
-button { font-family: 'Georgia', serif; font-size: 1em; padding: 10px 15px; border-radius: 5px; border: none; cursor: pointer; background-color: var(--gold-accent); color: var(--teak-dark); font-weight: bold; }
-button:hover { background-color: #ffc400; }
+button {
+    font-family: 'Georgia', serif;
+    font-size: 1em;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    background-color: var(--gold-accent);
+    color: var(--teak-dark);
+    font-weight: bold;
+}
+button:hover:not(:disabled) { background-color: #ffc400; }
+button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opacity: 0.7; }
 .danger-btn { background-color: var(--busted-red); color: white; }
 .danger-btn:hover { background-color: #e04462; }
 .confirm-btn { background-color: #28a745; color: white; }
@@ -323,45 +371,83 @@ button:hover { background-color: #ffc400; }
 /* --- END: Buttons --- */
 
 
-/* --- RETAINED: Scoreboard Styles --- */
-#scoreboard-content { max-height: 60vh; overflow-y: auto; }
-#scoreboard-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-#scoreboard-table th, #scoreboard-table td { border: 1px solid var(--teak-light); padding: 8px; text-align: center; }
-#scoreboard-table th { background-color: var(--teak-light); color: var(--light-text); }
-#scoreboard-table .total-score-row td { font-weight: bold; background-color: rgba(0,0,0,0.1); }
-#game-over-scoreboard { margin-top: 20px; }
-/* --- END: Scoreboard --- */
-
-
-/* --- RETAINED: Mobile Responsive Styles --- */
+/* --- NEW: Mobile Responsive Styles (from Judgment) --- */
 @media (max-width: 850px) {
-    /* --- BUG FIX --- */
-    /* Changed body height to auto to respect scrolling */
-    body { height: auto; min-height: 100vh; }
-    #game-board { flex-direction: column; height: auto; }
-    #mobile-scroll-container { display: flex; width: 300%; overflow-x: scroll; scroll-snap-type: x mandatory; }
-    .game-column { width: 100%; flex-shrink: 0; scroll-snap-align: start; padding: 10px; box-sizing: border-box; }
-    #center-column { order: 0; height: auto; } /* Let center column be auto-height on mobile */
-    #left-column { order: 1; }
-    #right-column { order: 2; }
-    
-    #player-hand-container { margin-top: 15px; }
-    .hand { min-height: 120px; } /* Adjusted for smaller cards */
-    .card { width: 60px; height: 90px; margin-left: -30px; }
-    .card-rank { font-size: 1.2em; }
-    .card-rank.top { top: 5px; left: 5px; }
-    .card-rank.bottom { bottom: 5px; right: 5px; }
-    .card-suit { font-size: 2.5em; line-height: 90px; }
-    
-    /* Mini-card on mobile */
-    .card-mini { width: 30px; height: 45px; margin-left: -25px; border-radius: 3px; }
-    .card-mini.anchor-7 { margin-left: 3px; margin-right: 3px; }
-    .anchor-7 + .card-mini { margin-left: -25px; }
-    .card-mini-rank { font-size: 0.7em; top: 2px; left: 3px; }
-    .card-mini-suit { font-size: 1.2em; line-height: 45px; }
-    
-    #page-indicator { display: flex; justify-content: center; gap: 10px; position: fixed; bottom: 10px; left: 0; right: 0; z-index: 100; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background-color: rgba(255, 255, 255, 0.4); transition: background-color 0.3s ease; }
+    body {
+        padding: 0;
+        /* Lock viewport height on mobile */
+        height: 100vh;
+        overflow: hidden;
+    }
+    #game-board {
+        flex-direction: column;
+        height: 100%;
+        padding: 0;
+        gap: 0;
+    }
+
+    /* This is the horizontal swiper */
+    #mobile-scroll-container {
+        display: flex;
+        flex-grow: 1;
+        width: 200%; /* 2 columns = 200% */
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Each column becomes a full "page" */
+    .game-column {
+        flex: 0 0 100%; /* Each column is 100% width */
+        width: 100%;
+        max-height: 100%;
+        box-sizing: border-box;
+        padding: 10px;
+        scroll-snap-align: center;
+        overflow-y: auto;
+        /* Reset heights/borders for mobile */
+        max-height: none; 
+        min-height: 100%;
+    }
+
+    #dashboard-column {
+        padding-bottom: 50px; /* Room for page indicator */
+    }
+    #table-column {
+        border: none; /* Remove desktop border */
+        padding-bottom: 50px;
+    }
+
+    /* Page Dots */
+    #page-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        position: fixed;
+        bottom: 10px;
+        left: 0;
+        right: 0;
+        z-index: 100;
+    }
+    .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.4);
+    }
     .dot.active { background-color: white; }
+
+    /* Make cards smaller on mobile */
+    .card-img {
+        width: 80px;
+        height: 112px;
+    }
+    /* Make river cards smaller */
+    .river-card {
+        width: 50px;
+        height: 70px;
+        margin-left: -40px; /* Adjust stacking */
+    }
+    .river-row { min-height: 80px; }
 }
 /* --- END: Mobile --- */
