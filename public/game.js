@@ -1,16 +1,19 @@
 window.addEventListener('DOMContentLoaded', () => {
-    // console.log("DEBUG: DOMContentLoaded event fired. Script starting.");
     const socket = io();
 
     window.gameState = {};
     let myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
     let myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
 
-    // Card Naming Maps for SVGs...
-    const SUIT_MAP = { /* ... */ };
-    const RANK_MAP = { /* ... */ };
-    const RANK_ORDER = { /* ... */ };
-    const SUITS_ORDER = { /* ... */ };
+    // Card Naming Maps for SVGs
+    const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
+    const RANK_MAP = {
+        'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
+        '10': '10', '9': '9', '8': '8', '7': '7', '6': '6',
+        '5': '5', '4': '4', '3': '3', '2': '2'
+    };
+    const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+    const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
 
     let isInitialGameRender = true;
     let pauseCountdownInterval;
@@ -30,17 +33,14 @@ window.addEventListener('DOMContentLoaded', () => {
         const playerNameInput = document.getElementById('player-name-input');
         if (joinButton && playerNameInput) {
             joinButton.addEventListener('click', () => {
-                console.log("DEBUG: Join Game button was definitely clicked!"); // Keep this log
                 const playerName = playerNameInput.value;
                 if (playerName.trim()) {
                     sessionStorage.setItem('sevenOfHeartsPlayerName', playerName);
-                     console.log("DEBUG: Attempting to emit joinGame. Socket connected:", socket.connected); // Keep this log
                     socket.emit('joinGame', { playerName: playerName, playerId: myPersistentPlayerId });
                 } else {
                      showWarning('Missing Name', 'Please enter your name to join.');
                 }
             });
-            // console.log("DEBUG: Join button listener attached.");
         } else {
             console.error("CRITICAL: Could not find join button or player name input during initial setup!");
         }
@@ -50,29 +50,126 @@ window.addEventListener('DOMContentLoaded', () => {
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
 
+    function setupLobbyEventListeners() {
+        const readyBtn = document.getElementById('ready-btn');
+        if (readyBtn) readyBtn.addEventListener('click', () => socket.emit('setPlayerReady', true));
+
+        const startBtn = document.getElementById('start-game-btn');
+        if (startBtn) startBtn.addEventListener('click', () => {
+            const hostPassword = document.getElementById('host-password-input').value;
+            const gameMode = document.querySelector('input[name="game-mode"]:checked').value;
+            const winCondition = document.querySelector('input[name="win-condition"]:checked').value;
+            socket.emit('startGame', { hostPassword, settings: { gameMode, winCondition } });
+        });
+
+        const endSessionBtn = document.getElementById('end-session-btn');
+        if (endSessionBtn) endSessionBtn.addEventListener('click', () => document.getElementById('confirm-end-game-modal').classList.remove('hidden'));
+
+        const hardResetBtn = document.getElementById('hard-reset-btn');
+        if (hardResetBtn) hardResetBtn.addEventListener('click', () => document.getElementById('confirm-hard-reset-modal').classList.remove('hidden'));
+    }
+
+    function setupModalAndButtonListeners() {
+        const logModal = document.getElementById('game-log-modal');
+        const showLogsBtn = document.getElementById('show-logs-btn');
+        const logModalClose = document.getElementById('game-log-modal-close');
+        const logModalOk = document.getElementById('game-log-modal-ok-btn');
+
+        if (showLogsBtn && logModal) {
+            showLogsBtn.addEventListener('click', () => {
+                renderLogModal(window.gameState?.logHistory);
+                logModal.classList.remove('hidden');
+            });
+        }
+        if (logModalClose && logModal) {
+            logModalClose.addEventListener('click', () => logModal.classList.add('hidden'));
+        }
+        if (logModalOk && logModal) {
+            logModalOk.addEventListener('click', () => logModal.classList.add('hidden'));
+        }
+
+        const scoreboardClose = document.getElementById('scoreboard-modal-close');
+        if (scoreboardClose) scoreboardClose.addEventListener('click', () => document.getElementById('scoreboard-modal')?.classList.add('hidden'));
+
+        const confirmEndYes = document.getElementById('confirm-end-yes-btn');
+        if (confirmEndYes) confirmEndYes.addEventListener('click', () => { socket.emit('endSession'); document.getElementById('confirm-end-game-modal')?.classList.add('hidden'); });
+        const confirmEndNo = document.getElementById('confirm-end-no-btn');
+        if (confirmEndNo) confirmEndNo.addEventListener('click', () => document.getElementById('confirm-end-game-modal')?.classList.add('hidden'));
+
+        const imBackBtn = document.getElementById('im-back-btn');
+        if (imBackBtn) imBackBtn.addEventListener('click', () => { socket.emit('playerIsBack'); document.getElementById('afk-notification-modal')?.classList.add('hidden'); });
+
+        const confirmResetYes = document.getElementById('confirm-reset-yes-btn');
+        if (confirmResetYes) confirmResetYes.addEventListener('click', () => { socket.emit('hardReset'); document.getElementById('confirm-hard-reset-modal')?.classList.add('hidden'); });
+        const confirmResetNo = document.getElementById('confirm-reset-no-btn');
+        if (confirmResetNo) confirmResetNo.addEventListener('click', () => document.getElementById('confirm-hard-reset-modal')?.classList.add('hidden'));
+
+        const warningOk = document.getElementById('warning-modal-ok-btn');
+        if (warningOk) warningOk.addEventListener('click', () => document.getElementById('warning-modal')?.classList.add('hidden'));
+
+        const returnToLobby = document.getElementById('return-to-lobby-btn');
+        if (returnToLobby) returnToLobby.addEventListener('click', () => { document.getElementById('game-over-modal')?.classList.add('hidden'); document.getElementById('game-board').style.display = 'none'; document.getElementById('lobby-screen').style.display = 'block'; isInitialGameRender = true; });
+
+        const passBtn = document.getElementById('pass-btn');
+        if(passBtn) passBtn.addEventListener('click', () => socket.emit('passTurn'));
+    }
+
+    function setupDynamicEventListeners() {
+        const playerListEl = document.getElementById('player-list');
+        if (playerListEl) playerListEl.addEventListener('click', (e) => {
+            if (e.target.classList.contains('kick-btn')) { const playerIdToKick = e.target.dataset.playerId; socket.emit('kickPlayer', playerIdToKick); }
+        });
+
+        const otherPlayersEl = document.getElementById('other-players-container');
+        if(otherPlayersEl) otherPlayersEl.addEventListener('click', (e) => {
+             const afkBtn = e.target.closest('.afk-btn'); if (afkBtn) { const playerIdToMark = afkBtn.dataset.playerId; socket.emit('markPlayerAFK', playerIdToMark); }
+        });
+
+        const myHandEl = document.getElementById('my-hand-container');
+        if(myHandEl) myHandEl.addEventListener('click', (e) => {
+            const cardWrapper = e.target.closest('.card-wrapper');
+            if (cardWrapper && cardWrapper.classList.contains('playable-card')) {
+                const cardImg = cardWrapper.querySelector('.card-img');
+                if (!cardImg) return;
+                const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
+                if (me && me.hand) {
+                    const cardData = me.hand.find(c => c.id === cardImg.dataset.id);
+                    if (cardData) socket.emit('playCard', cardData);
+                } else {
+                    console.error("Could not find player data or hand when clicking card.");
+                }
+            }
+        });
+
+        const scrollContainer = document.getElementById('mobile-scroll-container');
+        const pageIndicator = document.getElementById('page-indicator');
+        if (scrollContainer && pageIndicator) {
+            scrollContainer.addEventListener('scroll', () => {
+                const pageWidth = scrollContainer.offsetWidth;
+                const currentPage = Math.round(scrollContainer.scrollLeft / pageWidth);
+                pageIndicator.innerHTML = '';
+                for (let i = 0; i < 2; i++) {
+                    const dot = document.createElement('div'); dot.className = 'dot'; if (i === currentPage) dot.classList.add('active'); pageIndicator.appendChild(dot);
+                }
+            });
+        }
+    }
+
     // --- SOCKET EVENT HANDLERS ---
 
-    // --- DEBUG LOG ADDED ---
     socket.on('joinSuccess', (playerId) => {
-        console.log("DEBUG: Received 'joinSuccess' event. PlayerID:", playerId); // Log reception
-        try { // Add try...catch to catch errors inside
+        try {
             myPersistentPlayerId = playerId;
             sessionStorage.setItem('sevenOfHeartsPlayerId', playerId);
-            if (!window.gameState) {
-                console.log("DEBUG: joinSuccess - Switching view to Lobby Screen."); // Log action
-                document.getElementById('join-screen').style.display = 'none';
-                document.getElementById('lobby-screen').style.display = 'block';
-            } else {
-                 console.log("DEBUG: joinSuccess - Game state exists, likely reconnect."); // Log alternative path
-            }
+            // Always switch to lobby on initial join success
+            document.getElementById('join-screen').style.display = 'none';
+            document.getElementById('lobby-screen').style.display = 'block';
         } catch (error) {
-            console.error("ERROR inside joinSuccess handler:", error); // Log any errors
+            console.error("ERROR inside joinSuccess handler:", error);
         }
     });
-    // --- END DEBUG LOG ---
 
     socket.on('joinFailed', (message) => {
-         console.error("DEBUG: Received 'joinFailed' event:", message); // Log reception
         sessionStorage.removeItem('sevenOfHeartsPlayerId');
         sessionStorage.removeItem('sevenOfHeartsPlayerName');
         myPersistentPlayerId = null;
@@ -80,67 +177,145 @@ window.addEventListener('DOMContentLoaded', () => {
         showWarning('Join Failed', message);
     });
 
-    socket.on('kicked', () => { /* ... unchanged ... */ });
-    socket.on('forceDisconnect', () => { /* ... unchanged ... */ });
+    socket.on('kicked', () => {
+        sessionStorage.removeItem('sevenOfHeartsPlayerId');
+        sessionStorage.removeItem('sevenOfHeartsPlayerName');
+        location.reload();
+    });
 
-    // --- DEBUG LOG ADDED ---
+    socket.on('forceDisconnect', () => {
+        sessionStorage.removeItem('sevenOfHeartsPlayerId');
+        sessionStorage.removeItem('sevenOfHeartsPlayerName');
+        myPersistentPlayerId = null;
+        myPersistentPlayerName = null;
+        location.reload();
+    });
+
     socket.on('lobbyUpdate', (players) => {
-        console.log("DEBUG: Received 'lobbyUpdate' event. Players:", players); // Log reception
-        try { // Add try...catch to catch errors inside
-            console.log("DEBUG: lobbyUpdate - Switching view to Lobby Screen."); // Log action
+        try {
             document.getElementById('game-board').style.display = 'none';
             document.getElementById('join-screen').style.display = 'none';
             document.getElementById('lobby-screen').style.display = 'block';
             renderLobby(players);
-             console.log("DEBUG: lobbyUpdate - renderLobby called."); // Log render call
         } catch (error) {
-            console.error("ERROR inside lobbyUpdate handler:", error); // Log any errors
+            console.error("ERROR inside lobbyUpdate handler:", error);
         }
     });
-    // --- END DEBUG LOG ---
 
+    socket.on('gameStarted', () => {
+        document.getElementById('lobby-screen').style.display = 'none';
+        document.getElementById('game-board').style.display = 'flex';
+        isInitialGameRender = true; // Reset initial render flag
+    });
 
-    socket.on('gameStarted', () => { /* ... unchanged ... */ });
-    socket.on('updateGameState', (gs) => { /* ... unchanged ... */ });
-    socket.on('gameEnded', ({ logHistory }) => { /* ... unchanged ... */ });
-    socket.on('youWereMarkedAFK', () => { /* ... unchanged ... */ });
-    socket.on('warning', (data) => { /* ... unchanged ... */ });
+    socket.on('updateGameState', (gs) => {
+        console.log('Received GameState:', gs); // Keep this one for general debugging
+        window.gameState = gs;
 
-    // --- SETUP FUNCTIONS (lobby, modals, dynamic) ---
-    // (Ensure these are defined correctly as in the previous working version)
-     function setupLobbyEventListeners() { /* ... */ }
-     function setupModalAndButtonListeners() { /* ... */ }
-     function setupDynamicEventListeners() { /* ... */ }
+        // Ensure correct screen is shown
+        document.getElementById('join-screen').style.display = 'none';
+        document.getElementById('lobby-screen').style.display = 'none';
+        document.getElementById('game-board').style.display = 'flex';
 
+        const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
+        if (!me) {
+            console.error("My player data not found in received gameState!");
+            return;
+        }
+
+        const gameMode = gs.settings.gameMode;
+        renderMyInfo(me);
+        renderMyHand(me, gs, gameMode);
+        renderMyActions(me, gs, gameMode);
+        renderOtherPlayers(gs.players, me, gs.currentPlayerId);
+        renderGameStatusBanner(gs, me);
+        renderRiver(gs.boardState, gameMode);
+
+        if (isInitialGameRender) {
+            const mobileScroll = document.getElementById('mobile-scroll-container');
+            if (window.innerWidth <= 850 && mobileScroll) {
+                mobileScroll.scrollTo({ left: 0, behavior: 'auto' });
+            }
+            isInitialGameRender = false;
+        }
+    });
+
+    socket.on('gameEnded', ({ logHistory }) => {
+        renderGameOver(logHistory);
+        if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
+        lobbyReturnInterval = setInterval(() => {
+             document.getElementById('game-over-modal')?.classList.add('hidden');
+             isInitialGameRender = true;
+             clearInterval(lobbyReturnInterval);
+        }, 10000);
+    });
+
+    socket.on('youWereMarkedAFK', () => {
+        document.getElementById('afk-notification-modal')?.classList.remove('hidden');
+    });
+
+    socket.on('warning', (data) => {
+        console.warn("Received 'warning':", data); // Keep this for debugging warnings
+        if (typeof data === 'object' && data.title) {
+            showWarning(data.title, data.message);
+        } else {
+            showWarning('Alert', data);
+        }
+    });
 
     // --- RENDER FUNCTIONS ---
-    // (renderLobby, showWarning, renderGameOver, renderScoreboard, renderMyInfo,
-    //  renderMyHand, renderMyActions, renderOtherPlayers, renderGameStatusBanner,
-    //  updatePauseBanner, renderLogModal, createCardImageElement,
-    //  createRiverCardImageElement, createRiverPlaceholder, renderRiver,
-    //  getValidMoves, makeDraggable)
-    // --- These functions remain unchanged from the previous version ---
-    // --- But ensure they exist and are correctly defined ---
 
-    // Ensure renderLobby and showWarning are defined
     function renderLobby(players) {
-         try { // Add try...catch here too
+         try {
             const playerList = document.getElementById('player-list');
             const me = players.find(p => p.playerId === myPersistentPlayerId);
-            if (!me) { /* ... handle not found ... */ return; }
+            if (!me) {
+                console.warn("LobbyUpdate: My player data not found. Returning to join screen.");
+                document.getElementById('join-screen').style.display = 'block';
+                document.getElementById('lobby-screen').style.display = 'none';
+                sessionStorage.removeItem('sevenOfHeartsPlayerId');
+                myPersistentPlayerId = null; return;
+            }
             playerList.innerHTML = '';
-            players.forEach(p => { /* ... populate list ... */ });
+            players.forEach(p => {
+                const li = document.createElement('li');
+                let status = '';
+                if (p.isHost) { status = '👑';
+                } else if (!p.active) { status = '<span class="player-status-badge reconnecting">(Offline)</span>';
+                } else if (p.isReady) { status = '<span style="color: green;">✅ Ready</span>';
+                } else { status = '<span style="color: #b00;">❌ Not Ready</span>'; }
+                li.innerHTML = `<span>${p.name} ${status}</span> ${(me && me.isHost && p.playerId !== me.playerId) ? `<button class="kick-btn danger-btn" data-player-id="${p.playerId}">Kick</button>` : ''}`;
+                playerList.appendChild(li);
+            });
             const playerActions = document.getElementById('player-lobby-actions');
             const hostActions = document.getElementById('host-lobby-actions');
             const hostMsg = document.getElementById('host-message');
-            if (me && me.isHost) { /* ... handle host view ... */ }
-            else { /* ... handle player view ... */ }
+            if (me && me.isHost) {
+                if(playerActions) playerActions.style.display = 'none';
+                if(hostActions) hostActions.style.display = 'block';
+                if(hostMsg) hostMsg.style.display = 'none';
+                const startBtn = document.getElementById('start-game-btn');
+                if (startBtn) {
+                    const allOthersReady = players.filter(p => p.playerId !== me.playerId).every(p => p.isReady || !p.active);
+                    startBtn.disabled = !allOthersReady;
+                }
+            } else {
+                if(playerActions) playerActions.style.display = 'block';
+                if(hostActions) hostActions.style.display = 'none';
+                if(hostMsg) hostMsg.style.display = 'block';
+                const readyBtn = document.getElementById('ready-btn');
+                if (me && readyBtn) {
+                    readyBtn.disabled = me.isReady;
+                    readyBtn.textContent = me.isReady ? 'Ready!' : 'Ready';
+                    readyBtn.classList.toggle('confirm-btn', me.isReady);
+                }
+            }
          } catch(error) {
              console.error("ERROR inside renderLobby:", error);
          }
     }
     function showWarning(title, text) {
-         try { // Add try...catch
+         try {
             const titleEl = document.getElementById('warning-modal-title');
             const textEl = document.getElementById('warning-modal-text');
             const modalEl = document.getElementById('warning-modal');
@@ -151,28 +326,178 @@ window.addEventListener('DOMContentLoaded', () => {
               console.error("ERROR inside showWarning:", error);
          }
     }
+    function renderGameOver(logHistory) {
+        const titleEl = document.getElementById('game-over-title');
+        const winnerEl = document.getElementById('game-over-winner-text');
+        const scoreEl = document.getElementById('game-over-scoreboard');
+        const modalEl = document.getElementById('game-over-modal');
+        const scoreboardContent = document.getElementById('scoreboard-content')?.innerHTML || 'Scoreboard not available.';
 
-    // Define other render functions...
-     function renderGameOver(logHistory) { /* ... */ }
-     function renderScoreboard(players) { /* ... */ }
-     function renderMyInfo(me) { /* ... */ }
-     function renderMyHand(me, gs, gameMode) { /* ... */ }
-     function renderMyActions(me, gs, gameMode) { /* ... */ }
-     function renderOtherPlayers(players, me, currentPlayerId) { /* ... */ }
-     function renderGameStatusBanner(gs, me) { /* ... */ }
-     function updatePauseBanner(gs) { /* ... */ }
-     function renderLogModal(logHistory) { /* ... */ }
-     function createCardImageElement(card, gameMode) { /* ... */ }
-     function createRiverCardImageElement(suit, rank) { /* ... */ }
-     function createRiverPlaceholder(rank) { /* ... */ }
-     function renderRiver(boardState, gameMode) { /* ... */ }
-     function getValidMoves(hand, boardState, isFirstMove, gameMode) { /* ... */ }
-     function makeDraggable(modal) { /* ... */ }
-
+        if(titleEl) titleEl.textContent = 'Game Over!';
+        if(winnerEl) winnerEl.textContent = 'The game has concluded.'; // Update with actual winner later
+        if(scoreEl) scoreEl.innerHTML = scoreboardContent;
+        if(modalEl) modalEl.classList.remove('hidden');
+    }
+    function renderScoreboard(players) {
+        const scoreboard = document.getElementById('scoreboard-content');
+        if (scoreboard) scoreboard.innerHTML = '<p>Scoring logic not yet implemented.</p>';
+    }
+    function renderMyInfo(me) {
+        const nameEl = document.getElementById('my-name');
+        const scoreEl = document.getElementById('my-score');
+        if(nameEl) nameEl.textContent = `${me.name} (You) ${me.isHost ? '👑' : ''}`;
+        if(scoreEl) scoreEl.textContent = me.score || 0;
+    }
+    function renderMyHand(me, gs, gameMode) {
+        const handContainer = document.getElementById('my-hand-container');
+        if(!handContainer) return;
+        handContainer.innerHTML = '';
+        if (!me || !me.hand) return;
+        const sortedHand = me.hand.sort((a, b) => {
+            if (SUITS_ORDER[a.suit] !== SUITS_ORDER[b.suit]) return SUITS_ORDER[a.suit] - SUITS_ORDER[b.suit];
+            return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
+        });
+        const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gameMode);
+        const validMoveIds = new Set(validMoves.map(card => card.id));
+        sortedHand.forEach(card => {
+            const cardEl = createCardImageElement(card, gameMode);
+            if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId) {
+                cardEl.classList.add('playable-card');
+            }
+            handContainer.appendChild(cardEl);
+        });
+    }
+    function renderMyActions(me, gs, gameMode) {
+        const passBtn = document.getElementById('pass-btn');
+        if(!passBtn) return;
+        if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
+            passBtn.style.display = 'block';
+            const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gameMode);
+            passBtn.disabled = validMoves.length > 0;
+        } else {
+            passBtn.style.display = 'none';
+        }
+    }
+    function renderOtherPlayers(players, me, currentPlayerId) {
+        const container = document.getElementById('other-players-container');
+        if(!container) return;
+        container.innerHTML = '';
+        players.filter(p => p.playerId !== me.playerId).forEach(player => {
+            const tile = document.createElement('div');
+            tile.className = 'other-player-tile';
+            if (player.playerId === currentPlayerId) tile.classList.add('active-player');
+            let status = '';
+            if (player.status === 'Disconnected') status = '<span class="other-player-status reconnecting">Offline</span>';
+            let afkButton = '';
+            if (me.isHost && player.status === 'Active') afkButton = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
+            tile.innerHTML = `<div class="other-player-name">${player.name} ${player.isHost ? '👑' : ''} ${status}</div><div class="other-player-details"><div>Score: ${player.score || 0}</div><div>Cards: ${player.hand ? player.hand.length : 0}</div></div>${afkButton}`;
+            container.appendChild(tile);
+        });
+    }
+    function renderGameStatusBanner(gs, me) {
+        const banner = document.getElementById('game-status-banner');
+        if(!banner) return;
+        if (gs.isPaused) { updatePauseBanner(gs); return; }
+        if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
+        const currentPlayer = gs.players.find(p => p.playerId === gs.currentPlayerId);
+        if (!currentPlayer) { banner.textContent = "Waiting for game to start..."; return; }
+        const latestLog = gs.logHistory[0] || "Game Started.";
+        if (currentPlayer.playerId === me.playerId) {
+            banner.textContent = `YOUR TURN. (${latestLog})`;
+            if (gs.isFirstMove && !me.hand.find(c => c.id === '7-Hearts-0')) showWarning("Your Turn", "You do not have the 7 of Hearts. You must pass.");
+            else if (gs.isFirstMove) showWarning("Your Turn", "You must play the 7 of Hearts to begin.");
+        } else { banner.textContent = `Waiting for ${currentPlayer.name}... (${latestLog})`; }
+    }
+    function updatePauseBanner(gs) {
+        const banner = document.getElementById('game-status-banner');
+        if(!banner) return;
+        if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
+        const updateBanner = () => {
+            const remaining = Math.max(0, Math.round((gs.pauseEndTime - Date.now()) / 1000));
+            banner.innerHTML = `⏳ Game Paused. Waiting for ${gs.pausedForPlayerNames.join(', ')}... (${remaining}s) ⏳`;
+            if (remaining === 0) clearInterval(pauseCountdownInterval);
+        }; updateBanner(); pauseCountdownInterval = setInterval(updateBanner, 1000);
+    }
+    function renderLogModal(logHistory) {
+        const content = document.getElementById('game-log-modal-content');
+        if(!content) { console.error("Could not find log modal content area!"); return; }
+        if (!logHistory || !Array.isArray(logHistory) || logHistory.length === 0) {
+            content.innerHTML = "<div>No log entries yet.</div>";
+        } else {
+            try { content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join(''); }
+            catch (error) { console.error("Error rendering log modal content:", error); content.innerHTML = "<div>Error displaying logs.</div>"; }
+        }
+    }
+    function createCardImageElement(card, gameMode) {
+        const wrapper = document.createElement('div'); wrapper.className = 'card-wrapper';
+        const img = document.createElement('img'); img.className = 'card-img';
+        const suit = SUIT_MAP[card.suit]; const rank = RANK_MAP[card.rank];
+        img.src = `/assets/cards/${suit}_${rank}.svg`; img.alt = `${card.rank} of ${card.suit}`;
+        img.dataset.id = card.id; img.dataset.suit = card.suit; img.dataset.rank = card.rank;
+        wrapper.appendChild(img);
+        if (gameMode === 'two-deck-strict') {
+            const deckIndex = card.id.split('-')[2]; const indicator = document.createElement('span');
+            indicator.className = 'deck-indicator'; indicator.textContent = parseInt(deckIndex) + 1;
+            wrapper.appendChild(indicator);
+        } return wrapper;
+    }
+    function createRiverCardImageElement(suit, rank) {
+        const img = document.createElement('img'); img.className = 'river-card';
+        const suitName = SUIT_MAP[suit]; const rankName = RANK_MAP[rank];
+        img.src = `/assets/cards/${suitName}_${rankName}.svg`; img.alt = `${rank} of ${suit}`;
+        return img;
+    }
+    function createRiverPlaceholder(rank) {
+        const el = document.createElement('div'); el.className = 'river-card-placeholder'; el.textContent = rank; return el;
+    }
+    function renderRiver(boardState, gameMode) {
+        const riverContainer = document.getElementById('river-container');
+        if(!riverContainer) return; riverContainer.innerHTML = '';
+        const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+        let suitsToRender = []; let numDecks = 1;
+        if (gameMode === 'one-deck') suitsToRender = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+        else { numDecks = 2; suitsToRender = ['Hearts-0', 'Diamonds-0', 'Clubs-0', 'Spades-0', 'Hearts-1', 'Diamonds-1', 'Clubs-1', 'Spades-1']; }
+        suitsToRender.forEach(suitKey => {
+            const layout = boardState[suitKey]; const row = document.createElement('div'); row.className = 'river-row';
+            let suitName, deckIndexStr;
+            if (gameMode === 'one-deck') suitName = suitKey;
+            else [suitName, deckIndexStr] = suitKey.split('-');
+            if (!layout) { const label = (numDecks === 2) ? `${suitName} (Deck ${parseInt(deckIndexStr) + 1})` : suitName; row.innerHTML = `<div class="river-placeholder">${label}</div>`; }
+            else { const lowRankVal = layout.low; const highRankVal = layout.high;
+                if (lowRankVal === 7 && highRankVal === 7) { row.appendChild(createRiverPlaceholder('6')); row.appendChild(createRiverCardImageElement(suitName, '7')); row.appendChild(createRiverPlaceholder('8')); }
+                else { if (lowRankVal > 1) { const prevRank = allRanks[lowRankVal - 2]; row.appendChild(createRiverPlaceholder(prevRank)); }
+                    for (let r = lowRankVal; r <= highRankVal; r++) { const rankStr = allRanks[r-1]; if (rankStr) row.appendChild(createRiverCardImageElement(suitName, rankStr)); }
+                    if (highRankVal < 13) { const nextRank = allRanks[highRankVal]; row.appendChild(createRiverPlaceholder(nextRank)); }
+                }
+            } riverContainer.appendChild(row);
+        });
+    }
+    function getValidMoves(hand, boardState, isFirstMove, gameMode) {
+        const validMoves = []; if (!hand) return [];
+        if (isFirstMove) { const sevenOfHearts0 = hand.find(c => c.id === '7-Hearts-0'); return sevenOfHearts0 ? [sevenOfHearts0] : []; }
+        for (const card of hand) { const cardRankVal = RANK_ORDER[card.rank];
+            if (gameMode === 'one-deck') { const layout = boardState[card.suit]; if (card.rank === '7') { if (!layout) validMoves.push(card); } else if (layout) { if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) validMoves.push(card); } }
+            else if (gameMode === 'two-deck-strict') { const deckIndex = card.id.split('-')[2]; const suitKey = `${card.suit}-${deckIndex}`; const layout = boardState[suitKey]; if (card.rank === '7') { if (!layout) validMoves.push(card); } else if (layout) { if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) validMoves.push(card); } }
+            else { const suit = card.suit; const layout0 = boardState[`${suit}-0`]; const layout1 = boardState[`${suit}-1`]; if (card.rank === '7') { const deckIndex = card.id.split('-')[2]; const suitKey = `${suit}-${deckIndex}`; if (!boardState[suitKey]) validMoves.push(card); } else { if (layout0 && (cardRankVal === layout0.low - 1 || cardRankVal === layout0.high + 1)) { validMoves.push(card); continue; } if (layout1 && (cardRankVal === layout1.low - 1 || cardRankVal === layout1.high + 1)) { validMoves.push(card); } } }
+        } return validMoves;
+    }
+    function makeDraggable(modal) {
+        const modalContent = modal.querySelector('.modal-content');
+        const header = modal.querySelector('.modal-header');
+        if (!header || !modalContent) return;
+        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        const dragMouseDown = (e) => { e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; };
+        const dragTouchStart = (e) => { if (e.touches.length === 1) { pos3 = e.touches[0].clientX; pos4 = e.touches[0].clientY; document.ontouchend = closeTouchDragElement; document.ontouchmove = elementTouchDrag; } };
+        const elementDrag = (e) => { e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') { modalContent.style.left = '50%'; modalContent.style.top = '50%'; modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`; } else { modalContent.style.top = (modalContent.offsetTop - pos2) + "px"; modalContent.style.left = (modalContent.offsetLeft - pos1) + "px"; } };
+        const elementTouchDrag = (e) => { if (e.touches.length === 1) { e.preventDefault(); pos1 = pos3 - e.touches[0].clientX; pos2 = pos4 - e.touches[0].clientY; pos3 = e.touches[0].clientX; pos4 = e.touches[0].clientY; if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') { modalContent.style.left = '50%'; modalContent.style.top = '50%'; modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`; } else { modalContent.style.top = (modalContent.offsetTop - pos2) + "px"; modalContent.style.left = (modalContent.offsetLeft - pos1) + "px"; } } };
+        const closeDragElement = () => { document.onmouseup = null; document.onmousemove = null; };
+        const closeTouchDragElement = () => { document.ontouchend = null; document.ontouchmove = null; };
+        header.addEventListener('mousedown', dragMouseDown);
+        header.addEventListener('touchstart', dragTouchStart, { passive: false });
+    }
 
     document.querySelectorAll('.modal').forEach(modal => {
         if(modal) makeDraggable(modal);
     });
 
-    // console.log("DEBUG: End of initial script execution within DOMContentLoaded.");
 });
