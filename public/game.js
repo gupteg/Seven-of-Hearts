@@ -1,4 +1,14 @@
 window.addEventListener('DOMContentLoaded', () => {
+
+// --- ADD LOG AT VERY START ---
+    console.log("DEBUG: DOMContentLoaded event fired. Script starting.");
+    // --- END ---
+
+
+
+
+
+
     // --- DEBUG LOG REMOVED ---
     // console.log("DOM Loaded. Initializing script...");
     const socket = io();
@@ -41,19 +51,25 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Using the robust version from debugging ---
-    function setupJoinScreenListeners() {
+   function setupJoinScreenListeners() {
         const joinButton = document.getElementById('join-game-btn');
         const playerNameInput = document.getElementById('player-name-input');
         if (joinButton && playerNameInput) {
             joinButton.addEventListener('click', () => {
+                // --- ADD LOG INSIDE CLICK HANDLER ---
+                console.log("DEBUG: Join Game button was definitely clicked!");
+                // --- END ---
+
                 const playerName = playerNameInput.value;
                 if (playerName.trim()) {
                     sessionStorage.setItem('sevenOfHeartsPlayerName', playerName);
+                    console.log("DEBUG: Attempting to emit joinGame. Socket connected:", socket.connected); // Keep previous log too
                     socket.emit('joinGame', { playerName: playerName, playerId: myPersistentPlayerId });
                 } else {
                      showWarning('Missing Name', 'Please enter your name to join.');
                 }
             });
+            console.log("DEBUG: Join button listener attached."); // Keep previous log too
         } else {
             console.error("CRITICAL: Could not find join button or player name input during initial setup!");
         }
@@ -286,4 +302,5 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- DEBUG LOG REMOVED ---
     // console.log("Script initialization complete. Waiting for socket connection...");
+console.log("DEBUG: End of initial script execution within DOMContentLoaded."); // Add log at the end
 });
