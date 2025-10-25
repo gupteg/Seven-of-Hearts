@@ -54,10 +54,10 @@ function shuffleDeck(deck) {
 
 // --- Game Helper Functions ---
 function getNextPlayerId(currentPlayerId) {
-    // *** MODIFIED: Bot can be "next player" if it still has cards ***
+    
     const availablePlayers = gameState.players.filter(p => p.status === 'Active' || (p.isBot === true && p.hand.length > 0));
     
-    if (availablePlayers.length === 0) return null; // No one left to play
+    if (availablePlayers.length === 0) return null; 
     
     const currentIndex = availablePlayers.findIndex(p => p.playerId === currentPlayerId);
     if (currentIndex === -1) {
@@ -117,7 +117,7 @@ function initializeGame(readyPlayers, settings) {
         status: 'Active',
         hand: [],
         score: 0, 
-        isBot: false, // NEW: Bot flag
+        isBot: false, 
     }));
 
     const host = gamePlayers.find(p => p.isHost);
@@ -147,15 +147,15 @@ function initializeGame(readyPlayers, settings) {
 function startNewRound() {
     if (!gameState) return;
 
-    // *** NEW: Purge bots before starting the new round ***
+    
     const activePlayerIds = new Set(gameState.players.filter(p => p.isBot !== true).map(p => p.playerId));
     gameState.players = gameState.players.filter(p => activePlayerIds.has(p.playerId));
     gameState.dealerOrder = gameState.dealerOrder.filter(playerId => activePlayerIds.has(playerId));
 
-    // Check if enough players are left to continue
+    
     if (gameState.players.length < 2) {
         addLog('Not enough players to start a new round. Ending game.');
-        endSession(true); // Abort the game
+        endSession(true); 
         return;
     }
 
@@ -200,13 +200,13 @@ function startNewRound() {
     addLog(`Waiting for ${firstPlayerName} to play the 7 of Hearts.`);
     
     io.emit('updateGameState', gameState);
-    checkAndRunNextBotTurn(); // Check if the first player is a bot
+    checkAndRunNextBotTurn(); 
 }
 
 function endRound(winner) {
     if (!gameState) return;
 
-    // *** MODIFIED: Handle null winner (e.g. all bots) ***
+    
     const winnerName = winner ? winner.name : "No one";
     addLog(`🎉 ${winnerName} has won Round ${gameState.currentRound}! 🎉`);
 
@@ -214,14 +214,14 @@ function endRound(winner) {
 
     gameState.players.forEach(p => {
         let roundScore = 0;
-        // Score is calculated for everyone *except* the winner (if one exists)
+        
         if (!winner || p.playerId !== winner.playerId) {
             for (const card of p.hand) {
                 roundScore += RANK_ORDER[card.rank];
             }
         }
         
-        // Don't add score to bots, they are already removed
+        
         if (p.isBot !== true) {
              p.score += roundScore; 
         }
@@ -243,17 +243,10 @@ function endRound(winner) {
 }
 
 function endSession(wasGameAborted = false) {
+    // This function is for END GAME (returns to lobby)
     if (!gameState) {
-        const host = players.find(p => p.isHost);
-        if (host) {
-             players.forEach(p => {
-                if (p.socketId !== host.socketId) {
-                    io.to(p.socketId).emit('forceDisconnect');
-                }
-             });
-             players = [host]; 
-             io.emit('lobbyUpdate', players);
-        }
+        // This should not be called from lobby, but as a fallback:
+        hardReset(); // A lobby end session IS a hard reset
         return;
     }
 
@@ -261,7 +254,7 @@ function endSession(wasGameAborted = false) {
     io.emit('gameEnded', { logHistory: gameState.logHistory });
 
     players = gameState.players
-        .filter(p => p.status !== 'Removed') // Bots will have status 'Removed'
+        .filter(p => p.status !== 'Removed') 
         .map(p => ({
             playerId: p.playerId,
             socketId: p.socketId, 
@@ -285,18 +278,18 @@ function endSession(wasGameAborted = false) {
     if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
 }
 
-// *** NEW: Bot Helper Function ***
+
 function checkAndRunNextBotTurn() {
     if (!gameState) return;
     const nextPlayer = gameState.players.find(p => p.playerId === gameState.currentPlayerId);
     
     if (nextPlayer && nextPlayer.isBot === true) {
-        // Wait 1.5s before bot plays
+        
         setTimeout(() => runBotTurn(nextPlayer), 1500);
     }
 }
 
-// *** NEW: Bot Turn Logic ***
+
 function runBotTurn(botPlayer) {
     if (!gameState || !botPlayer || botPlayer.isBot !== true || botPlayer.hand.length === 0) {
         return;
@@ -338,41 +331,40 @@ function runBotTurn(botPlayer) {
 
         if (botPlayer.hand.length === 0) {
             addLog(`[Bot] ${botPlayer.name} has played its last card.`);
-            // Bot does not "win", just empties its hand
+            
         }
     } else {
-        // No valid move, bot passes
+        
         addLog(`[Bot] ${botPlayer.name} passed.`);
     }
 
-    // Get next player
+    
     gameState.currentPlayerId = getNextPlayerId(botPlayer.playerId);
 
     if (gameState.currentPlayerId === null) {
-        // This means no players (human or bot) have any valid moves or cards left
+        
         addLog('All players are out of cards or moves. Ending round.');
-        endRound(null); // End round with no winner
+        endRound(null); 
     } else {
         io.emit('updateGameState', gameState);
-        checkAndRunNextBotTurn(); // Chain to next bot if needed
+        checkAndRunNextBotTurn(); 
     }
 }
 
 
-// *** MODIFIED: handlePlayerRemoval to enable Bot mode ***
+
 function handlePlayerRemoval(playerId) {
     if (!gameState) return;
     const playerToRemove = gameState.players.find(p => p.playerId === playerId);
     
     if (playerToRemove && playerToRemove.status !== 'Removed') {
-        // --- NEW BOT LOGIC ---
-        playerToRemove.status = 'Removed'; // Mark as removed for scoring/next round
-        playerToRemove.isBot = true;      // Mark as bot to finish playing hand
+        
+        playerToRemove.status = 'Removed'; 
+        playerToRemove.isBot = true;      
         addLog(`[Bot] ${playerToRemove.name} disconnected and is now bot-controlled.`);
         delete reconnectTimers[playerId];
-        // --- END NEW BOT LOGIC ---
-
-        // Check if game can continue
+        
+        
         const realActivePlayers = gameState.players.filter(p => p.status === 'Active' && p.isBot !== true);
         if (realActivePlayers.length < 2) {
             addLog('Not enough human players. Ending game.');
@@ -380,16 +372,16 @@ function handlePlayerRemoval(playerId) {
             return;
         } 
             
-        // Handle host change
+        
         if (playerToRemove.isHost) {
-            const newHost = realActivePlayers[0]; // New host must be human
+            const newHost = realActivePlayers[0]; 
             if (newHost) {
                 newHost.isHost = true;
                 addLog(`${newHost.name} is the new host.`);
             }
         }
         
-        // Handle pause state
+        
         const stillDisconnected = gameState.players.some(p => p.status === 'Disconnected');
         if (!stillDisconnected) {
             gameState.isPaused = false;
@@ -404,21 +396,33 @@ function handlePlayerRemoval(playerId) {
 
         io.emit('updateGameState', gameState);
 
-        // If it was the removed player's turn, trigger bot turn
+        
         if (gameState.currentPlayerId === playerId) {
             runBotTurn(playerToRemove);
         }
     }
 }
 
-function hardReset(hostSocket) {
+// *** MODIFIED: hardReset now provides a "clean slate" ***
+function hardReset() {
+    // Disconnect ALL players in the lobby
     players.forEach(p => {
-        if (p.socketId !== hostSocket.id) {
-            io.to(p.socketId).emit('forceDisconnect');
-        }
+        io.to(p.socketId).emit('forceDisconnect');
     });
 
+    // Disconnect ALL players in the game (if a game is in progress)
+    if (gameState && gameState.players) {
+        gameState.players.forEach(p => {
+            if (p.socketId) {
+                io.to(p.socketId).emit('forceDisconnect');
+            }
+        });
+    }
+
+    // Wipe server state completely
     gameState = null;
+    players = [];
+    
     Object.keys(reconnectTimers).forEach(key => {
         clearTimeout(reconnectTimers[key]);
         delete reconnectTimers[key];
@@ -427,17 +431,8 @@ function hardReset(hostSocket) {
         clearTimeout(gameOverCleanupTimer);
         gameOverCleanupTimer = null;
     }
-
-    const host = players.find(p => p.socketId === hostSocket.id);
-    if (host) {
-        host.isReady = true;
-        host.active = true;
-        players = [host];
-    } else {
-        players = [];
-    }
     
-    io.emit('lobbyUpdate', players);
+    console.log("Server has been hard reset.");
 }
 // --- END: Core Game Logic ---
 
@@ -493,7 +488,7 @@ io.on('connection', (socket) => {
                     playerId: `${socket.id}-${Date.now()}`,
                     name: playerName,
                     socketId: socket.id,
-                    isHost: players.length === 0,
+                    isHost: players.length === 0, // First player is host
                     isReady: false,
                     active: true
                 };
@@ -583,13 +578,13 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} played the ${cardToPlay.rank} of ${cardToPlay.suit}.`);
 
                 if (player.hand.length === 0) {
-                    endRound(player); // Human player wins
+                    endRound(player); 
                     return;
                 }
 
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); // Check if next player is bot
+                checkAndRunNextBotTurn(); 
                 
             } else {
                 socket.emit('warning', { title: 'Invalid Move', message: 'That is not a valid move.' });
@@ -611,11 +606,12 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} passed.`);
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); // Check if next player is bot
+                checkAndRunNextBotTurn(); 
             }
         }
     });
 
+    
     socket.on('requestNextRound', () => {
         if (!gameState) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
@@ -648,7 +644,7 @@ io.on('connection', (socket) => {
             
             const afkSocket = io.sockets.sockets.get(playerToMark.socketId);
             if (afkSocket) {
-                afkSocket.emit('youWereMarkedAFK'); // Correct event name
+                afkSocket.emit('youWereMarkedAFK'); 
             }
         }
     });
@@ -678,14 +674,17 @@ io.on('connection', (socket) => {
 
     socket.on('endSession', () => {
         let isHost = false;
-        const playerInLobby = players.find(p => p.socketId === socket.id);
-        if (playerInLobby && playerInLobby.isHost) {
-            isHost = true;
-        } else if (gameState) {
+        
+        if (gameState) {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) {
                 isHost = true;
             }
+        } else {
+             const playerInLobby = players.find(p => p.socketId === socket.id);
+             if (playerInLobby && playerInLobby.isHost) {
+                isHost = true;
+             }
         }
 
         if (isHost) {
@@ -694,9 +693,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('hardReset', () => {
-         const requester = players.find(p => p.socketId === socket.id);
-         if (requester && requester.isHost) {
-            hardReset(socket);
+         let isHost = false;
+         if (gameState) {
+            const playerInGame = gameState.players.find(p => p.socketId === socket.id);
+            if (playerInGame && playerInGame.isHost) isHost = true;
+         } else {
+            const playerInLobby = players.find(p => p.socketId === socket.id);
+            if (playerInLobby && playerInLobby.isHost) isHost = true;
+         }
+
+         if (isHost) {
+            hardReset();
          }
     });
 
