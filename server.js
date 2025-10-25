@@ -249,7 +249,7 @@ function endRound(winner) {
     });
 }
 
-// *** MODIFIED: Emit gameOverAnnouncement before delay ***
+// *** MODIFIED: Emit gameOverAnnouncement before delay, and add nested 15s delay ***
 function endSession(wasGameAborted = false) {
     if (!gameState) {
         hardReset(); 
@@ -280,32 +280,39 @@ function endSession(wasGameAborted = false) {
         addLog('The game session has ended.');
         io.emit('gameEnded', { logHistory: gameState.logHistory });
 
-        players = gameState.players
-            .filter(p => p.isBot !== true) // Filter out bots when returning to lobby
-            .map(p => ({
-                playerId: p.playerId,
-                socketId: p.socketId, 
-                name: p.name,
-                isHost: p.isHost,
-                isReady: p.isHost, 
-                active: p.status === 'Active' // Status might be 'Removed' if they were AFK bot
-            }));
-        
-        // Update socketIds for active players
-        players.forEach(p => {
-            if (p.active) {
-                const gamePlayer = gameState.players.find(gp => gp.playerId === p.playerId);
-                if (gamePlayer) p.socketId = gamePlayer.socketId;
-            }
-        });
+        // --- NEW: Nested 15s delay for lobby return ---
+        setTimeout(() => {
+            if (!gameState) return; // Check again
+            
+            players = gameState.players
+                .filter(p => p.isBot !== true) // Filter out bots when returning to lobby
+                .map(p => ({
+                    playerId: p.playerId,
+                    socketId: p.socketId, 
+                    name: p.name,
+                    isHost: p.isHost,
+                    isReady: p.isHost, 
+                    active: p.status === 'Active' // Status might be 'Removed' if they were AFK bot
+                }));
+            
+            // Update socketIds for active players
+            players.forEach(p => {
+                if (p.active) {
+                    const gamePlayer = gameState.players.find(gp => gp.playerId === p.playerId);
+                    if (gamePlayer) p.socketId = gamePlayer.socketId;
+                }
+            });
 
-        io.emit('lobbyUpdate', players);
+            io.emit('lobbyUpdate', players);
 
-        gameState = null;
-        Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
-        if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
+            gameState = null;
+            Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
+            if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
+            
+        }, 15000); // 15 second delay *after* gameEnded is sent
+        // --- END: Nested delay ---
         
-    }, 15000); // 15 second delay
+    }, 15000); // 15 second delay *before* gameEnded is sent
 }
 
 
