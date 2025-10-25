@@ -7,12 +7,12 @@
     --parchment-bg: #D2B48C;
     --dark-text: #4a2c2a;
     --busted-red: #c70039;
-    --sienna-border: #a0522d; 
+    --sienna-border: #a0522d;
 }
 
 body {
     /* MODIFIED: Font family changed */
-    font-family: Helvetica, Arial, sans-serif; 
+    font-family: Helvetica, Arial, sans-serif;
     background-color: var(--teak-dark);
     background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
     padding: 15px;
@@ -49,13 +49,13 @@ body {
 #game-board {
     display: flex;
     gap: 15px;
-    height: calc(100vh - 30px); 
+    height: calc(100vh - 30px);
     max-height: calc(100vh - 30px);
     position: relative; /* Needed for announcement banner */
 }
 
 #mobile-scroll-container {
-    display: contents; 
+    display: contents;
 }
 
 /* Left Column: Player Dashboard */
@@ -64,7 +64,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    overflow: hidden; 
+    overflow: hidden;
     max-height: 100%;
 }
 
@@ -79,7 +79,7 @@ body {
     border-radius: 15px;
     padding: 15px;
     box-sizing: border-box;
-    overflow-y: auto; 
+    overflow-y: auto;
     max-height: 100%;
 }
 
@@ -87,7 +87,7 @@ body {
     border-bottom: 2px solid var(--teak-light);
     padding-bottom: 5px;
     margin-bottom: 5px;
-    flex-shrink: 0; 
+    flex-shrink: 0;
 }
 .panel-header h4 {
     margin: 0;
@@ -104,10 +104,10 @@ body {
     padding: 15px;
     text-align: center;
     box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
-    flex-shrink: 0; 
+    flex-shrink: 0;
 }
 #my-info-panel h3 { margin: 0 0 10px 0; color: var(--light-text); }
-.my-score-box { 
+.my-score-box {
     display: flex;
     justify-content: center;
     gap: 20px;
@@ -125,7 +125,7 @@ body {
 #my-hand-container {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center; 
+    justify-content: center;
     gap: 10px;
     padding: 10px;
     background: rgba(0,0,0,0.2);
@@ -133,18 +133,18 @@ body {
     flex-grow: 1;
     flex-shrink: 1;
     overflow-y: auto;
-    min-height: 100px; 
-    align-content: flex-start; 
+    min-height: 100px;
+    align-content: flex-start;
 }
 
 /* Action Buttons */
 #my-actions-panel {
     display: flex;
-    flex-wrap: wrap; 
+    flex-wrap: wrap;
     gap: 10px;
     justify-content: center;
-    flex-shrink: 0; 
-    padding: 5px 0; 
+    flex-shrink: 0;
+    padding: 5px 0;
 }
 .action-btn {
     padding: 12px 20px;
@@ -163,7 +163,7 @@ body {
 .action-btn:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opacity: 0.7; }
 .action-btn.secondary-btn { background-color: var(--teak-light); color: var(--light-text); }
 .action-btn.secondary-btn:hover:not(:disabled) { background-color: var(--teak-dark); }
-.action-btn.danger-btn { background-color: var(--busted-red); color: white; } 
+.action-btn.danger-btn { background-color: var(--busted-red); color: white; }
 .action-btn.danger-btn:hover:not(:disabled) { background-color: #e04462; }
 
 
@@ -171,7 +171,7 @@ body {
 #other-players-table-container {
     flex-grow: 1;
     flex-shrink: 1;
-    overflow-y: auto; 
+    overflow-y: auto;
     min-height: 100px;
     background: rgba(0,0,0,0.1);
     padding: 10px;
@@ -181,7 +181,7 @@ body {
     width: 100%;
     border-collapse: collapse;
 }
-#other-players-table th, 
+#other-players-table th,
 #other-players-table td {
     padding: 8px;
     text-align: left;
@@ -213,16 +213,16 @@ body {
     background-color: rgba(218, 165, 32, 0.1);
     font-weight: bold;
 }
-.other-player-status { 
-    font-size: 0.8em; 
-    padding: 2px 5px; 
-    border-radius: 4px; 
-    color: white; 
-    display: inline-block; 
-    margin-left: 5px; 
+.other-player-status {
+    font-size: 0.8em;
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: white;
+    display: inline-block;
+    margin-left: 5px;
 }
 .other-player-status.reconnecting { background-color: var(--busted-red); }
-.other-player-status.bot { background-color: #4a6a8c; } 
+.other-player-status.bot { background-color: #4a6a8c; }
 /* --- END: Dashboard Styles --- */
 
 
@@ -243,7 +243,7 @@ body {
     cursor: pointer;
     box-shadow: 0 0 20px var(--gold-accent);
     border: 3px solid var(--gold-accent);
-    box-sizing: border-box; 
+    box-sizing: border-box;
 }
 .card-img.playable-card:hover {
     transform: translateY(-10px) scale(1.05);
@@ -291,8 +291,8 @@ body {
 #river-container {
     display: flex;
     flex-direction: column;
-    gap: 2px; /* MODIFIED: Tighter rows */
-    flex-grow: 1; 
+    gap: 1px; /* MODIFIED: Tighter rows */
+    flex-grow: 1;
 }
 
 /* --- MODIFIED: Desktop Grid Layout --- */
@@ -301,12 +301,12 @@ body {
     border-radius: 8px;
     padding: 10px;
     min-height: 110px; /* MODIFIED: Taller rows */
-    flex-grow: 1; 
-    
+    flex-grow: 1;
+
     display: grid;
     grid-template-columns: repeat(13, 1fr);
     align-items: center;
-    gap: 2px; 
+    gap: 2px;
 }
 .river-row-label {
     grid-column: 1 / 14; /* Span all 13 columns */
@@ -323,25 +323,25 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
     flex-shrink: 0;
-    
+
     width: 100%;
     height: auto;
-    aspect-ratio: 100 / 140; 
+    aspect-ratio: 100 / 140;
     max-width: 95px; /* MODIFIED: Bigger cards */
-    margin: 0 auto; 
+    margin: 0 auto;
 }
 .river-card.deck-1-tint {
     border: 4px solid var(--busted-red, #c70039); /* Tint for river cards */
     box-sizing: border-box;
 }
 
-.river-placeholder { 
+.river-placeholder {
     font-size: 1.5em;
     font-weight: bold;
     color: var(--light-text);
     opacity: 0.3;
     text-align: center;
-    grid-column: 1 / 14; 
+    grid-column: 1 / 14;
 }
 
 .river-card-placeholder {
@@ -354,15 +354,15 @@ body {
     color: var(--gold-accent);
     font-family: Arial, sans-serif; /* Keep placeholder font */
     font-weight: bold;
-    flex-shrink: 0; 
+    flex-shrink: 0;
     opacity: 0.6;
-    
+
     width: 100%;
     height: auto;
     aspect-ratio: 100 / 140;
-    font-size: 1.2vw; 
+    font-size: 1.2vw;
     max-width: 95px; /* MODIFIED: Bigger cards */
-    margin: 0 auto; 
+    margin: 0 auto;
 }
 
 .river-empty-placeholder {
@@ -640,56 +640,60 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         padding: 0;
         gap: 0;
     }
-    
+
     /* --- NEW: Compact Info Panel --- */
     #my-info-panel {
-        padding: 8px; /* Reduced */
+        padding: 6px; /* Further Reduced */
         gap: 5px;
+        border-width: 2px;
     }
     #my-info-panel h3 {
-        margin-bottom: 5px; /* Reduced */
-        font-size: 1.1em;
+        margin-bottom: 4px; /* Reduced */
+        font-size: 1em; /* Reduced */
     }
     .my-score-box {
-        font-size: 0.9em; /* Reduced */
-        gap: 10px;
+        font-size: 0.85em; /* Reduced */
+        gap: 8px;
     }
     .my-score-box .score-value {
-        font-size: 1.1em; /* Reduced */
+        font-size: 1.05em; /* Reduced */
     }
-    
-    /* --- NEW: Show mobile banner --- */
-    #dashboard-status-banner {
+
+    /* --- NEW: Show mobile banner & Compacted */
+    #dashboard-status-banner,
+    #table-column #game-status-banner { /* Target both banners on mobile */
         display: block;
-        padding: 8px; /* Reduced */
-        font-size: 0.9em; /* Reduced */
+        padding: 6px; /* Further Reduced */
+        font-size: 0.85em; /* Further Reduced */
+        margin-bottom: 5px; /* Add slight gap below */
     }
+
 
     /* --- Mobile Toggle Layout --- */
     #mobile-scroll-container {
         display: flex;
-        flex-direction: column; 
+        flex-direction: column;
         flex-grow: 1;
         width: 100%;
-        overflow: hidden; 
+        overflow: hidden;
     }
 
     .game-column {
-        flex: 1; 
+        flex: 1;
         width: 100%;
-        max-height: none; 
-        min-height: 0; 
+        max-height: none;
+        min-height: 0;
         box-sizing: border-box;
         padding: 10px;
-        overflow-y: auto; 
-        display: flex; 
+        overflow-y: auto;
+        display: flex;
         flex-direction: column;
     }
-    
+
     #table-column {
         display: none;
     }
-    
+
     #game-board.table-view #dashboard-column {
         display: none;
     }
@@ -699,7 +703,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         flex-basis: 100%;
         width: 100%;
         margin: 0;
-        padding: 10px;
+        padding: 10px; /* Keep consistent padding */
         box-sizing: border-box;
     }
     /* --- END: Mobile Toggle Layout --- */
@@ -709,14 +713,14 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     #my-actions-panel {
         display: none;
     }
-    
+
     /* MODIFIED: Reduce padding on columns to account for new bar */
     #dashboard-column {
-        padding-bottom: 50px; 
+        padding-bottom: 25px; /* Reduced */
     }
     #table-column {
         border: none;
-        padding-bottom: 50px; 
+        padding-bottom: 25px; /* Reduced */
     }
 
     /* --- MODIFIED: Unified Mobile Action/Nav Bar --- */
@@ -762,52 +766,57 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     }
 
     /* --- Mobile River Overrides --- */
+    /* NEW: Prevent river container growing into padding */
+    #river-container {
+        flex-grow: 0;
+    }
+
     .river-row {
-        display: flex; 
+        display: flex;
         grid-template-columns: unset;
-        justify-content: center; 
-        overflow-x: hidden; 
-        min-height: 110px; 
+        justify-content: center;
+        overflow-x: hidden;
+        min-height: 110px;
     }
     /* HIDE new desktop label on mobile */
     .river-row-label {
         display: none;
     }
     .river-card {
-        width: 70px; 
+        width: 70px;
         height: 98px;
         aspect-ratio: unset;
-        max-width: none; 
+        max-width: none;
     }
     .river-card-placeholder {
-        width: 70px; 
+        width: 70px;
         height: 98px;
-        font-size: 1.2em; 
+        font-size: 1.2em;
         aspect-ratio: unset;
         max-width: none;
     }
     .river-empty-placeholder {
-        display: none; 
+        display: none;
     }
-    
+
     .river-card.bunched {
-        margin-left: -55px; 
+        margin-left: -55px;
         z-index: 1;
         transition: all 0.2s ease;
     }
     .river-card.bunched:hover {
         z-index: 10;
         transform: scale(1.1) translateY(-5px);
-        margin-right: 5px; 
+        margin-right: 5px;
     }
     /* --- END: Mobile River Overrides --- */
-    
+
     /* MODIFIED: Add padding below player table on mobile */
     #other-players-table-container {
         padding-bottom: 60px;
         max-height: none; /* Allow full scroll on mobile */
     }
-    
+
     /* MODIFIED: Final hands below scoreboard on mobile */
     #round-over-modal .modal-scrollable-content {
         display: flex;
@@ -816,7 +825,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     .final-hands-header {
         margin-top: 15px; /* Add space */
     }
-    
+
     /* Adjust announcement text size for mobile */
     #winner-announcement-text {
         font-size: clamp(2em, 10vw, 4em);
