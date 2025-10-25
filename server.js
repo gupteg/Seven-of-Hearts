@@ -31,12 +31,26 @@ function addLog(message) {
 }
 
 // --- Deck Creation Logic ---
-function createDeck(deckCount) {
+// *** MODIFIED: Handle 'fungible' game mode ***
+function createDeck(gameMode) {
     let decks = [];
-    for (let i = 0; i < deckCount; i++) {
-        for (const suit of SUITS) {
-            for (const rank of RANKS) {
-                decks.push({ suit, rank, id: `${rank}-${suit}-${i}` });
+    if (gameMode === 'fungible') {
+        // Create two decks with unique copy IDs ('-c1', '-c2')
+        for (let i = 1; i <= 2; i++) {
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    decks.push({ suit, rank, id: `${rank}-${suit}-c${i}` });
+                }
+            }
+        }
+    } else {
+        // Existing logic for 1 or 2 decks (using '-0', '-1')
+        const deckCount = parseInt(gameMode, 10);
+        for (let i = 0; i < deckCount; i++) {
+            for (const suit of SUITS) {
+                for (const rank of RANKS) {
+                    decks.push({ suit, rank, id: `${rank}-${suit}-${i}` });
+                }
             }
         }
     }
@@ -69,67 +83,139 @@ function getNextPlayerId(currentPlayerId) {
     return availablePlayers[nextIndex].playerId;
 }
 
-// *** MODIFIED: Added fungible logic ***
-function checkValidMove(card, boardState, hand, isFirstMove, deckMode) {
+// *** MODIFIED: checkValidMove split for fungible mode ***
+function checkValidMove(card, boardState, hand, isFirstMove) {
+    if (gameState.settings.gameMode === 'fungible') {
+        return checkValidMoveFungible(card, boardState, hand, isFirstMove);
+    } else {
+        return checkValidMoveStrict(card, boardState, hand, isFirstMove);
+    }
+}
+
+// *** NEW: Fungible move logic ***
+function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
+    if (isFirstMove) {
+        // Start card is always 7-Hearts-c1
+        return card.id === '7-Hearts-c1';
+    }
+    
+    const suitLayout = boardState[card.suit];
+    const cardRankVal = RANK_ORDER[card.rank];
+
+    if (card.rank === '7') {
+        // Can play a 7 if its suit layout doesn't exist
+        if (!suitLayout) return true;
+        // Or if row1 exists but row2 doesn't
+        if (suitLayout.row1 && !suitLayout.row2) return true;
+        // Otherwise (if row1 and row2 exist), it's not valid
+        return false;
+    }
+
+    // Check non-7 cards
+    if (suitLayout) {
+        // Check row 1
+        if (suitLayout.row1) {
+            if (cardRankVal === suitLayout.row1.high + 1) return true;
+            if (cardRankVal === suitLayout.row1.low - 1) return true;
+        }
+        // Check row 2
+        if (suitLayout.row2) {
+            if (cardRankVal === suitLayout.row2.high + 1) return true;
+            if (cardRankVal === suitLayout.row2.low - 1) return true;
+        }
+    }
+
+    return false; // Not playable on any available row
+}
+
+// *** NEW: Original logic refactored for clarity ***
+function checkValidMoveStrict(card, boardState, hand, isFirstMove) {
     if (isFirstMove) {
         return card.id === '7-Hearts-0';
     }
 
     const deckIndex = card.id.split('-')[2];
-    const cardRankVal = RANK_ORDER[card.rank];
-    const suit = card.suit;
+    const suitKey = `${card.suit}-${deckIndex}`;
 
     if (card.rank === '7') {
-        if (deckMode === 'fungible') {
-            // Valid if NEITHER river for this suit exists
-            const suitKey0 = `${suit}-0`;
-            const suitKey1 = `${suit}-1`;
-            return !boardState[suitKey0] && !boardState[suitKey1];
-        } else {
-            // Original logic: valid if THIS river doesn't exist
-            const suitKey = `${suit}-${deckIndex}`;
-            return !boardState[suitKey];
-        }
+        return !boardState[suitKey];
     }
 
-    // Check non-'7' cards
-    if (deckMode === 'fungible') {
-        // Check against BOTH rivers for this suit
-        const suitKey0 = `${suit}-0`;
-        const suitKey1 = `${suit}-1`;
-        const layout0 = boardState[suitKey0];
-        const layout1 = boardState[suitKey1];
-
-        if (layout0 && (cardRankVal === layout0.high + 1 || cardRankVal === layout0.low - 1)) {
-            return true;
-        }
-        if (layout1 && (cardRankVal === layout1.high + 1 || cardRankVal === layout1.low - 1)) {
-            return true;
-        }
-        return false; // Not playable on either river
-    } else {
-        // Original logic: check only the specific river
-        const suitKey = `${suit}-${deckIndex}`;
-        const suitLayout = boardState[suitKey];
-        if (suitLayout) {
-            if (cardRankVal === suitLayout.high + 1) return true;
-            if (cardRankVal === suitLayout.low - 1) return true;
-        }
-        return false;
+    const suitLayout = boardState[suitKey];
+    if (suitLayout) {
+        const cardRankVal = RANK_ORDER[card.rank];
+        if (cardRankVal === suitLayout.high + 1) return true;
+        if (cardRankVal === suitLayout.low - 1) return true;
     }
+
+    return false;
 }
 
-// *** MODIFIED: Pass deckMode to checkValidMove ***
-function checkHandForValidMoves(hand, boardState, isFirstMove, deckMode) {
-    if (isFirstMove) {
-        return hand.some(card => card.id === '7-Hearts-0');
-    }
-    for (const card of hand) {
-        if (checkValidMove(card, boardState, hand, false, deckMode)) { // Pass deckMode
-            return true;
+// *** MODIFIED: checkHandForValidMoves split for fungible mode ***
+function checkHandForValidMoves(hand, boardState, isFirstMove) {
+    if (gameState.settings.gameMode === 'fungible') {
+        if (isFirstMove) {
+            return hand.some(card => card.id === '7-Hearts-c1');
+        }
+        for (const card of hand) {
+            if (checkValidMoveFungible(card, boardState, hand, false)) {
+                return true;
+            }
+        }
+    } else {
+        // Original Strict Logic
+        if (isFirstMove) {
+            return hand.some(card => card.id === '7-Hearts-0');
+        }
+        for (const card of hand) {
+            if (checkValidMoveStrict(card, boardState, hand, false)) {
+                return true;
+            }
         }
     }
     return false;
+}
+
+// *** NEW: Helper to place a card in fungible mode ***
+function handleFungibleCardPlay(cardToPlay) {
+    const suit = cardToPlay.suit;
+    const rankVal = RANK_ORDER[cardToPlay.rank];
+
+    if (cardToPlay.rank === '7') {
+        if (!gameState.boardState[suit]) {
+            // This is the first 7 of this suit, create row1
+            gameState.boardState[suit] = { row1: { low: 7, high: 7 } };
+        } else {
+            // This is the second 7, create row2
+            gameState.boardState[suit].row2 = { low: 7, high: 7 };
+        }
+    } else {
+        // This is a non-7 card, use deterministic placement
+        const layout = gameState.boardState[suit];
+        let placed = false;
+
+        // --- Priority Check: Row 1 ---
+        if (layout.row1) {
+            if (rankVal === layout.row1.high + 1) {
+                layout.row1.high = rankVal;
+                placed = true;
+            } else if (rankVal === layout.row1.low - 1) {
+                layout.row1.low = rankVal;
+                placed = true;
+            }
+        }
+        
+        // --- Priority Check: Row 2 (only if not placed on row 1) ---
+        if (!placed && layout.row2) {
+             if (rankVal === layout.row2.high + 1) {
+                layout.row2.high = rankVal;
+                placed = true;
+            } else if (rankVal === layout.row2.low - 1) {
+                layout.row2.low = rankVal;
+                placed = true;
+            }
+        }
+    }
 }
 // --- END: Game Helpers ---
 
@@ -154,21 +240,22 @@ function initializeGame(readyPlayers, settings) {
     const otherPlayers = gamePlayers.filter(p => !p.isHost);
     const dealerOrder = [host.playerId, ...otherPlayers.map(p => p.playerId)];
 
-    // Determine deckCount based on deckMode
-    let deckCount = 1;
-    if (settings.deckMode === 'double' || settings.deckMode === 'fungible') {
-        deckCount = 2;
-    }
+    // *** MODIFIED: Store gameMode and deckCount separately ***
+    const gameMode = settings.deckCount; // '1', '2', or 'fungible'
+    let deckCountForDealing = 1;
+    if (gameMode === '2') deckCountForDealing = 2;
+    if (gameMode === 'fungible') deckCountForDealing = 2;
+    // *** END MODIFICATION ***
 
     gameState = {
         players: gamePlayers,
         boardState: {},
         currentPlayerId: null,
         logHistory: ['Game initialized.'],
-        settings: { // Store the mode
-            deckMode: settings.deckMode,
-            deckCount: deckCount, // Also store count for convenience
-            winCondition: settings.winCondition
+        settings: {
+            ...settings,
+            gameMode: gameMode, // NEW: '1', '2', or 'fungible'
+            deckCount: deckCountForDealing // NEW: 1 or 2 (for client rendering)
         },
         isPaused: false,
         pausedForPlayerNames: [],
@@ -178,7 +265,7 @@ function initializeGame(readyPlayers, settings) {
         dealerOrder: dealerOrder,
         currentDealerIndex: -1,
         dealerId: null,
-        isBetweenRounds: false, // NEW FLAG
+        isBetweenRounds: false,
     };
 
     io.emit('gameStarted');
@@ -209,10 +296,10 @@ function startNewRound() {
     gameState.isFirstMove = true;
     gameState.logHistory = [];
     gameState.players.forEach(p => p.hand = []);
-    gameState.isBetweenRounds = false; // NEW: Set flag to false
+    gameState.isBetweenRounds = false;
 
-    // Use stored deckCount
-    let deck = createDeck(gameState.settings.deckCount);
+    // *** MODIFIED: Pass gameMode to createDeck ***
+    let deck = createDeck(gameState.settings.gameMode);
     deck = shuffleDeck(deck);
 
     let playerIndex = 0;
@@ -223,8 +310,11 @@ function startNewRound() {
 
     let firstPlayerId = null;
     let firstPlayerName = null;
+    
+    // *** MODIFIED: Find correct start card based on gameMode ***
+    const startCardId = gameState.settings.gameMode === 'fungible' ? '7-Hearts-c1' : '7-Hearts-0';
     for (const player of gameState.players) {
-        if (player.hand.some(card => card.id === '7-Hearts-0')) {
+        if (player.hand.some(card => card.id === startCardId)) {
             firstPlayerId = player.playerId;
             firstPlayerName = player.name;
             break;
@@ -232,6 +322,8 @@ function startNewRound() {
     }
 
     if (!firstPlayerId) {
+        // Fallback if start card isn't dealt (e.g., player count vs deck size)
+        // Note: In fungible mode with full decks, this shouldn't happen
         firstPlayerId = gameState.players[0].playerId;
         firstPlayerName = gameState.players[0].name;
     }
@@ -246,7 +338,6 @@ function startNewRound() {
     checkAndRunNextBotTurn();
 }
 
-// *** MODIFIED: Send finalHands and hostId, set isBetweenRounds flag ***
 function endRound(winner) {
     if (!gameState) return;
 
@@ -255,7 +346,7 @@ function endRound(winner) {
     addLog(`🎉 ${winnerName} has won Round ${gameState.currentRound}! 🎉`);
 
     let scoreboard = [];
-    let finalHands = {}; // NEW: Store final hands
+    let finalHands = {};
 
     gameState.players.forEach(p => {
         let roundScore = 0;
@@ -277,16 +368,14 @@ function endRound(winner) {
             cumulativeScore: p.score
         });
 
-        // Store a copy of the hand (important: bots might still have cards)
         finalHands[p.playerId] = [...p.hand];
     });
 
-    scoreboard.sort((a, b) => a.cumulativeScore - b.cumulativeScore); // Sort low score first for display consistency
+    scoreboard.sort((a, b) => a.cumulativeScore - b.cumulativeScore);
 
-    gameState.isBetweenRounds = true; // NEW: Set flag to true
+    gameState.isBetweenRounds = true;
 
-    // NEW: Find current host to send ID
-    const currentHost = gameState.players.find(p => p.isHost && p.status !== 'Removed'); // Find active host
+    const currentHost = gameState.players.find(p => p.isHost && p.status !== 'Removed');
     const hostId = currentHost ? currentHost.playerId : null;
 
     io.emit('roundOver', {
@@ -294,14 +383,12 @@ function endRound(winner) {
         winnerName: winnerName,
         roundNumber: gameState.currentRound,
         finalHands: finalHands,
-        hostId: hostId // NEW: Send hostId
+        hostId: hostId
     });
 
-    // Also send an updateGameState so fallback button appears immediately
     io.emit('updateGameState', gameState);
 }
 
-// *** MODIFIED: Timers to 12s, added final updateGameState ***
 function endSession(wasGameAborted = false) {
     if (!gameState) {
         hardReset();
@@ -310,10 +397,9 @@ function endSession(wasGameAborted = false) {
 
     addLog('The game session is ending...');
 
-    // --- Calculate Winner ---
     let minScore = Infinity;
     let winners = [];
-    gameState.players.filter(p => p.isBot !== true).forEach(p => { // Only consider human players for winning
+    gameState.players.filter(p => p.isBot !== true).forEach(p => {
         if (p.score < minScore) {
             minScore = p.score;
             winners = [p.name];
@@ -322,37 +408,29 @@ function endSession(wasGameAborted = false) {
         }
     });
 
-    // --- NEW: BUG FIX ---
-    // Send final state so client scoreboards are updated BEFORE modal is shown
     io.emit('updateGameState', gameState);
-
-    // --- Emit Announcement ---
     io.emit('gameOverAnnouncement', { winnerNames: winners });
-    // --- END ---
 
-    // Delay the actual session end and lobby return
     setTimeout(() => {
-        if (!gameState) return; // Game might have been hard reset during the delay
+        if (!gameState) return;
 
         addLog('The game session has ended.');
         io.emit('gameEnded', { logHistory: gameState.logHistory });
 
-        // --- NEW: Nested 12s delay for lobby return ---
         setTimeout(() => {
-            if (!gameState) return; // Check again
+            if (!gameState) return;
 
             players = gameState.players
-                .filter(p => p.isBot !== true) // Filter out bots when returning to lobby
+                .filter(p => p.isBot !== true)
                 .map(p => ({
                     playerId: p.playerId,
                     socketId: p.socketId,
                     name: p.name,
                     isHost: p.isHost,
                     isReady: p.isHost,
-                    active: p.status === 'Active' // Status might be 'Removed' if they were AFK bot
+                    active: p.status === 'Active'
                 }));
 
-            // Update socketIds for active players
             players.forEach(p => {
                 if (p.active) {
                     const gamePlayer = gameState.players.find(gp => gp.playerId === p.playerId);
@@ -366,38 +444,38 @@ function endSession(wasGameAborted = false) {
             Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
             if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
 
-        }, 12000); // 12 second delay *after* gameEnded is sent
-        // --- END: Nested delay ---
+        }, 12000);
 
-    }, 12000); // 12 second delay *before* gameEnded is sent
+    }, 12000);
 }
 
 
-// *** MODIFIED: Pass deckMode to bot's checkValidMove ***
 function checkAndRunNextBotTurn() {
     if (!gameState) return;
     const nextPlayer = gameState.players.find(p => p.playerId === gameState.currentPlayerId);
 
     if (nextPlayer && nextPlayer.isBot === true) {
 
-        setTimeout(() => runBotTurn(nextPlayer, gameState.settings.deckMode), 1500); // Pass deckMode
+        setTimeout(() => runBotTurn(nextPlayer), 1500);
     }
 }
 
 
-// *** MODIFIED: Accept deckMode, pass to checkValidMove ***
-function runBotTurn(botPlayer, deckMode) {
+function runBotTurn(botPlayer) {
     if (!gameState || !botPlayer || botPlayer.isBot !== true || botPlayer.hand.length === 0) {
         return;
     }
 
     let cardToPlay = null;
     if (gameState.isFirstMove) {
-        cardToPlay = botPlayer.hand.find(c => c.id === '7-Hearts-0');
+        // *** MODIFIED: Find correct start card for bot ***
+        const startCardId = gameState.settings.gameMode === 'fungible' ? '7-Hearts-c1' : '7-Hearts-0';
+        cardToPlay = botPlayer.hand.find(c => c.id === startCardId);
     } else {
-        // Simple bot: find the first playable card using the correct mode's logic
+        // Simple bot: find the first playable card
         for (const card of botPlayer.hand) {
-            if (checkValidMove(card, gameState.boardState, botPlayer.hand, false, deckMode)) { // Pass deckMode
+            // *** MODIFIED: Use the main checkValidMove function ***
+            if (checkValidMove(card, gameState.boardState, botPlayer.hand, false)) {
                 cardToPlay = card;
                 break;
             }
@@ -408,18 +486,24 @@ function runBotTurn(botPlayer, deckMode) {
         const cardInHandIndex = botPlayer.hand.findIndex(c => c.id === cardToPlay.id);
         botPlayer.hand.splice(cardInHandIndex, 1);
 
-        const cardRankVal = RANK_ORDER[cardToPlay.rank];
-        const deckIndex = cardToPlay.id.split('-')[2];
-        const suitKey = `${cardToPlay.suit}-${deckIndex}`;
-
-        // Card placement logic remains the same (goes onto its own deck's river)
-        if (!gameState.boardState[suitKey]) {
-            gameState.boardState[suitKey] = { low: 7, high: 7 };
-        } else if (cardRankVal > 7) {
-            gameState.boardState[suitKey].high = cardRankVal;
+        // *** MODIFIED: Handle card play based on gameMode ***
+        if (gameState.settings.gameMode === 'fungible') {
+            handleFungibleCardPlay(cardToPlay);
         } else {
-            gameState.boardState[suitKey].low = cardRankVal;
+            // Original Strict Logic
+            const cardRankVal = RANK_ORDER[cardToPlay.rank];
+            const deckIndex = cardToPlay.id.split('-')[2];
+            const suitKey = `${cardToPlay.suit}-${deckIndex}`;
+
+            if (!gameState.boardState[suitKey]) {
+                gameState.boardState[suitKey] = { low: 7, high: 7 };
+            } else if (cardRankVal > 7) {
+                gameState.boardState[suitKey].high = cardRankVal;
+            } else {
+                gameState.boardState[suitKey].low = cardRankVal;
+            }
         }
+        // *** END MODIFICATION ***
 
         if (gameState.isFirstMove) {
             gameState.isFirstMove = false;
@@ -429,7 +513,6 @@ function runBotTurn(botPlayer, deckMode) {
 
         if (botPlayer.hand.length === 0) {
             addLog(`[Bot] ${botPlayer.name} has played its last card.`);
-            // Bot's turn ends, getNextPlayerId will skip them now
         }
     } else {
         addLog(`[Bot] ${botPlayer.name} passed.`);
@@ -439,8 +522,6 @@ function runBotTurn(botPlayer, deckMode) {
     gameState.currentPlayerId = getNextPlayerId(botPlayer.playerId);
 
     if (gameState.currentPlayerId === null) {
-
-        // Check if any *human* player won (rare case if bot plays last card and no humans left?)
         const humanWinner = gameState.players.find(p => p.status === 'Active' && p.isBot !== true && p.hand.length === 0);
         if (humanWinner) {
              endRound(humanWinner);
@@ -450,7 +531,7 @@ function runBotTurn(botPlayer, deckMode) {
         }
     } else {
         io.emit('updateGameState', gameState);
-        checkAndRunNextBotTurn(); // Already passes deckMode via initial call
+        checkAndRunNextBotTurn();
     }
 }
 
@@ -469,7 +550,7 @@ function handlePlayerRemoval(playerId) {
 
 
         const realActivePlayers = gameState.players.filter(p => p.status === 'Active' && p.isBot !== true);
-        if (realActivePlayers.length < 1) { // Need at least 1 human to continue
+        if (realActivePlayers.length < 1) {
             addLog('Not enough human players. Ending game.');
             endSession(true);
             return;
@@ -505,7 +586,7 @@ function handlePlayerRemoval(playerId) {
 
 
         if (gameState.currentPlayerId === playerId) {
-            runBotTurn(playerToRemove, gameState.settings.deckMode); // Pass deckMode
+            runBotTurn(playerToRemove);
         }
     }
 }
@@ -516,14 +597,13 @@ function hardReset() {
 
     const sockets = io.sockets.sockets;
     sockets.forEach((socket, socketId) => {
-        // Check if this socket belongs to someone in the lobby or game
         const inLobby = players.some(p => p.socketId === socketId);
         const inGame = gameState?.players.some(p => p.socketId === socketId);
 
         if(inLobby || inGame) {
              console.log(`Forcing disconnect for socket ${socketId}`);
              socket.emit('forceDisconnect');
-             socket.disconnect(true); // Force disconnect
+             socket.disconnect(true);
         }
     });
 
@@ -585,19 +665,13 @@ io.on('connection', (socket) => {
         } else {
             // --- Lobby Logic ---
             let existingPlayer = null;
-            // Don't rejoin based on playerId in lobby after hard reset
-            // if (playerId) {
-            //     existingPlayer = players.find(p => p.playerId === playerId);
-            // }
-
-            // Check if name already exists
+            
              let nameExists = players.some(p => p.name.toLowerCase() === playerName.toLowerCase());
              if (nameExists) {
                 socket.emit('joinFailed', `Name "${playerName}" is already taken.`);
                 return;
              }
 
-            // If existing player had same socket ID (rare, but possible on quick reconnect)
             existingPlayer = players.find(p => p.socketId === socket.id);
 
             if (existingPlayer) {
@@ -652,21 +726,28 @@ io.on('connection', (socket) => {
 
         const readyPlayers = players.filter(p => p.isReady && p.active);
 
-        if (readyPlayers.length < 3) {
-            socket.emit('warning', 'You need at least 3 ready players to start.');
+        // *** MODIFIED: Logic for deckCount setting ***
+        // settings.deckCount is '1', '2', or 'fungible'
+        const gameMode = settings.deckCount;
+        let minPlayers = 3;
+        if (gameMode === 'fungible' || gameMode === '2') {
+             minPlayers = 3; // Keep min 3, but can support more
+        }
+        
+        if (readyPlayers.length < minPlayers) {
+            socket.emit('warning', `You need at least ${minPlayers} ready players to start.`);
             return;
         }
+        // *** END MODIFICATION ***
 
         initializeGame(readyPlayers, settings);
     });
 
     // --- Seven of Hearts Game Events ---
-    // *** MODIFIED: Pass deckMode to checkValidMove ***
     socket.on('playCard', (card) => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
 
-        // Prevent bots from sending this event (shouldn't happen)
         if (player && player.isBot) return;
 
         if (player && player.playerId === gameState.currentPlayerId) {
@@ -678,24 +759,30 @@ io.on('connection', (socket) => {
 
             const cardToPlay = player.hand[cardInHandIndex];
 
-            // Pass deckMode to validation
-            const isValid = checkValidMove(cardToPlay, gameState.boardState, player.hand, gameState.isFirstMove, gameState.settings.deckMode);
+            // *** MODIFIED: Use the main checkValidMove function ***
+            const isValid = checkValidMove(cardToPlay, gameState.boardState, player.hand, gameState.isFirstMove);
 
             if (isValid) {
                 player.hand.splice(cardInHandIndex, 1);
 
-                const cardRankVal = RANK_ORDER[cardToPlay.rank];
-                const deckIndex = cardToPlay.id.split('-')[2];
-                const suitKey = `${cardToPlay.suit}-${deckIndex}`;
-
-                // Placement logic remains the same
-                if (!gameState.boardState[suitKey]) {
-                    gameState.boardState[suitKey] = { low: 7, high: 7 };
-                } else if (cardRankVal > 7) {
-                    gameState.boardState[suitKey].high = cardRankVal;
+                // *** MODIFIED: Handle card play based on gameMode ***
+                if (gameState.settings.gameMode === 'fungible') {
+                    handleFungibleCardPlay(cardToPlay);
                 } else {
-                    gameState.boardState[suitKey].low = cardRankVal;
+                    // Original Strict Logic
+                    const cardRankVal = RANK_ORDER[cardToPlay.rank];
+                    const deckIndex = cardToPlay.id.split('-')[2];
+                    const suitKey = `${cardToPlay.suit}-${deckIndex}`;
+
+                    if (!gameState.boardState[suitKey]) {
+                        gameState.boardState[suitKey] = { low: 7, high: 7 };
+                    } else if (cardRankVal > 7) {
+                        gameState.boardState[suitKey].high = cardRankVal;
+                    } else {
+                        gameState.boardState[suitKey].low = cardRankVal;
+                    }
                 }
+                // *** END MODIFICATION ***
 
                 if (gameState.isFirstMove) {
                     gameState.isFirstMove = false;
@@ -710,7 +797,7 @@ io.on('connection', (socket) => {
 
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); // Already passes deckMode via initial call
+                checkAndRunNextBotTurn();
 
             } else {
                 socket.emit('warning', { title: 'Invalid Move', message: 'That is not a valid move.' });
@@ -718,17 +805,16 @@ io.on('connection', (socket) => {
         }
     });
 
-    // *** MODIFIED: Pass deckMode to checkHandForValidMoves ***
     socket.on('passTurn', () => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
 
-        if (player && player.isBot) return; // Bots don't send this
+        if (player && player.isBot) return;
 
         if (player && player.playerId === gameState.currentPlayerId) {
 
-            // Pass deckMode to validation
-            const hasValidMove = checkHandForValidMoves(player.hand, gameState.boardState, gameState.isFirstMove, gameState.settings.deckMode);
+            // *** MODIFIED: Use the main checkHandForValidMoves function ***
+            const hasValidMove = checkHandForValidMoves(player.hand, gameState.boardState, gameState.isFirstMove);
 
             if (hasValidMove) {
                 socket.emit('warning', { title: 'Invalid Pass', message: 'You cannot pass, you have a valid move.' });
@@ -736,7 +822,7 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} passed.`);
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); // Already passes deckMode via initial call
+                checkAndRunNextBotTurn();
             }
         }
     });
@@ -758,7 +844,6 @@ io.on('connection', (socket) => {
         const requester = gameState.players.find(p => p.socketId === socket.id);
         const playerToMark = gameState.players.find(p => p.playerId === playerIdToMark);
 
-        // Don't mark bots as AFK
         if (requester && requester.isHost && playerToMark && playerToMark.status === 'Active' && !playerToMark.isBot) {
             playerToMark.status = 'Disconnected';
             addLog(`Host marked ${playerToMark.name} as AFK. The game is paused.`);
@@ -813,32 +898,27 @@ io.on('connection', (socket) => {
             }
         } else {
              const playerInLobby = players.find(p => p.socketId === socket.id);
-             // Cannot end session from lobby anymore, only hard reset
-             // if (playerInLobby && playerInLobby.isHost) {
-             //    isHost = true;
-             // }
+             // Cannot end session from lobby
         }
 
         if (isHost) {
-            endSession(false); // Triggers announcement + 12s delay
+            endSession(false);
         }
     });
 
     socket.on('hardReset', () => {
          let isHost = false;
-         // Check in game first
          if (gameState?.players) {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) isHost = true;
          }
-         // Check in lobby if no game or not found in game
          if (!isHost && players) {
             const playerInLobby = players.find(p => p.socketId === socket.id);
             if (playerInLobby && playerInLobby.isHost) isHost = true;
          }
 
          if (isHost) {
-            hardReset(); // Immediately disconnects everyone and wipes state
+            hardReset();
          }
     });
 
@@ -860,21 +940,19 @@ io.on('connection', (socket) => {
                 io.emit('updateGameState', gameState);
             }
         } else {
-            // Remove player from lobby if they disconnect
             const disconnectedPlayerIndex = players.findIndex(p => p.socketId === socket.id);
             if (disconnectedPlayerIndex !== -1) {
                  const disconnectedPlayer = players[disconnectedPlayerIndex];
                  console.log(`Player ${disconnectedPlayer.name} left lobby.`);
                  const wasHost = disconnectedPlayer.isHost;
-                 players.splice(disconnectedPlayerIndex, 1); // Remove player
+                 players.splice(disconnectedPlayerIndex, 1);
 
-                 // If host left, assign new host
                  if (wasHost && players.length > 0) {
                      players[0].isHost = true;
-                     players[0].isReady = true; // New host is auto-ready
+                     players[0].isReady = true;
                      console.log(`New host is ${players[0].name}`);
                  }
-                 io.emit('lobbyUpdate', players); // Update remaining players
+                 io.emit('lobbyUpdate', players);
             }
         }
     });
