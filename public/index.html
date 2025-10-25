@@ -33,7 +33,7 @@
                     <input type="radio" id="deck-2" name="deck-count" value="2">
                     <label for="deck-2">2 Decks</label>
                 </div>
-                </div>
+            </div>
             <div id="host-controls">
                 <input type="password" id="host-password-input" placeholder="Host Password">
                 <button id="start-game-btn">Start Game</button>
@@ -82,7 +82,10 @@
                 <div id="river-container">
                     </div>
 
-            </div> </div> <div id="page-indicator"></div>
+            </div> </div> <div id="page-indicator">
+            <button id="show-dashboard-btn" class="page-toggle-btn active">My Hand</button>
+            <button id="show-table-btn" class="page-toggle-btn">Table</button>
+        </div>
 
     </div>
 
@@ -181,7 +184,7 @@
             </div>
             <p id="round-over-winner-text"></p>
             <div class="modal-scrollable-content" id="round-over-scoreboard">
-                </div>
+            </div>
             <div class="modal-actions">
                 <button id="round-over-ok-btn" class="confirm-btn">OK</button>
                 <button id="start-next-round-btn" class="confirm-btn" style="display: none;">Start Next Round</button>

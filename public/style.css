@@ -7,6 +7,7 @@
     --parchment-bg: #D2B48C;
     --dark-text: #4a2c2a;
     --busted-red: #c70039;
+    --sienna-border: #a0522d; /* Deck 2 border color */
 }
 
 body {
@@ -187,7 +188,7 @@ body {
 .other-player-details { font-size: 0.9em; opacity: 0.9; margin-top: 8px; }
 .other-player-tile .afk-btn { position: absolute; top: 5px; right: 5px; font-size: 0.8em; padding: 2px 4px; }
 .other-player-status { font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background-color: var(--busted-red); color: white; display: inline-block; margin-left: 5px; }
-.other-player-status.bot { background-color: #4a6a8c; } /* Bot status color */
+.other-player-status.bot { background-color: #4a6a8c; } 
 /* --- END: Dashboard Styles --- */
 
 
@@ -214,13 +215,14 @@ body {
     transform: translateY(-10px) scale(1.05);
 }
 
-/* --- MODIFIED: Stronger Deck 2 Tint --- */
+/* --- MODIFIED: Deck 2 Tint (Border) --- */
 .deck-1-tint {
-    background-color: rgba(255, 230, 0, 0.2);
-    filter: sepia(60%) hue-rotate(-10deg) brightness(1.1);
+    border: 3px solid var(--sienna-border);
+    box-sizing: border-box;
 }
-.card-img.deck-1-tint:hover {
-    filter: sepia(0%); /* Remove tint on hover */
+/* Ensure playable border overrides tint border */
+.card-img.playable-card.deck-1-tint {
+    border: 3px solid var(--gold-accent);
 }
 /* --- END: SVG Card Styles --- */
 
@@ -241,7 +243,7 @@ body {
 #river-container {
     display: flex;
     flex-direction: column;
-    gap: 5px; /* MODIFIED: Tighter rows */
+    gap: 2px; /* MODIFIED: Tighter rows */
     flex-grow: 1; 
 }
 
@@ -250,13 +252,13 @@ body {
     background: rgba(0,0,0,0.2);
     border-radius: 8px;
     padding: 10px;
-    min-height: 80px; 
+    min-height: 110px; /* MODIFIED: Taller rows */
     flex-grow: 1; 
     
     display: grid;
     grid-template-columns: repeat(13, 1fr);
     align-items: center;
-    gap: 2px; /* MODIFIED: Tighter cards */
+    gap: 2px; 
 }
 .river-card {
     border-radius: 4px;
@@ -267,11 +269,12 @@ body {
     width: 100%;
     height: auto;
     aspect-ratio: 100 / 140; 
-    max-width: 85px; /* MODIFIED: Bigger cards */
+    max-width: 95px; /* MODIFIED: Bigger cards */
     margin: 0 auto; 
 }
 .river-card.deck-1-tint {
-    filter: sepia(60%) hue-rotate(-10deg) brightness(1.1); /* Tint for river cards */
+    border: 3px solid var(--sienna-border); /* Tint for river cards */
+    box-sizing: border-box;
 }
 
 .river-placeholder { 
@@ -300,7 +303,7 @@ body {
     height: auto;
     aspect-ratio: 100 / 140;
     font-size: 1.2vw; 
-    max-width: 85px; /* MODIFIED: Bigger cards */
+    max-width: 95px; /* MODIFIED: Bigger cards */
     margin: 0 auto; 
 }
 
@@ -311,7 +314,7 @@ body {
     border-radius: 4px;
     border: 2px solid rgba(255, 255, 255, 0.05);
     box-sizing: border-box;
-    max-width: 85px; /* MODIFIED: Bigger cards */
+    max-width: 95px; /* MODIFIED: Bigger cards */
     margin: 0 auto;
 }
 /* --- END: Desktop Grid Layout --- */
@@ -443,64 +446,85 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         gap: 0;
     }
 
-    /* --- MODIFIED: Mobile Scrolling Redesign --- */
+    /* --- MODIFIED: Mobile Toggle Layout --- */
     #mobile-scroll-container {
         display: flex;
+        flex-direction: column; /* Stack columns vertically */
         flex-grow: 1;
-        width: 200%;
-        overflow-x: auto;
-        scroll-snap-type: none; /* MODIFIED: Removed mandatory snap */
-        -webkit-overflow-scrolling: touch;
+        width: 100%;
+        overflow: hidden; /* No horizontal scroll */
     }
 
     .game-column {
-        flex: 0 0 100%;
+        flex: 1; /* Column takes up available space */
         width: 100%;
         max-height: none; 
-        min-height: 100%; 
+        min-height: 0; /* Allow column to shrink */
         box-sizing: border-box;
         padding: 10px;
-        scroll-snap-align: center;
-        
-        /* MODIFIED: Independent Vertical Scrolling */
-        height: 100%; 
-        overflow-y: auto;
+        overflow-y: auto; /* Independent vertical scroll */
+        display: flex; /* Re-enable flex for column contents */
+        flex-direction: column;
     }
-    /* --- END: Mobile Scrolling Redesign --- */
+    
+    /* Default state: Show Dashboard, Hide Table */
+    #table-column {
+        display: none;
+    }
+    
+    /* Toggled state: Hide Dashboard, Show Table */
+    #game-board.table-view #dashboard-column {
+        display: none;
+    }
+    #game-board.table-view #table-column {
+        display: flex;
+    }
+    /* --- END: Mobile Toggle Layout --- */
 
 
     #dashboard-column {
-        padding-bottom: 50px;
+        padding-bottom: 50px; /* Space for toggle bar */
     }
     #table-column {
         border: none;
-        padding-bottom: 50px;
+        padding-bottom: 50px; /* Space for toggle bar */
     }
 
+    /* --- MODIFIED: Page Indicator Toggle Bar --- */
     #page-indicator {
         display: flex;
-        justify-content: center;
-        gap: 10px;
         position: fixed;
-        bottom: 10px;
+        bottom: 0;
         left: 0;
         right: 0;
         z-index: 100;
+        background: var(--teak-dark);
+        border-top: 2px solid var(--teak-light);
     }
-    .dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background-color: rgba(255, 255, 255, 0.4);
+    .page-toggle-btn {
+        flex: 1;
+        padding: 15px;
+        font-size: 1.1em;
+        background-color: transparent;
+        color: var(--light-text);
+        border: none;
+        border-radius: 0;
+        opacity: 0.6;
     }
-    .dot.active { background-color: white; }
+    .page-toggle-btn.active {
+        background-color: var(--teak-light);
+        opacity: 1;
+        font-weight: bold;
+    }
+    /* --- END: Page Indicator --- */
+
 
     .card-img {
-        width: 90px; /* MODIFIED: 3-card layout */
-        height: 126px;
+        width: 80px; /* MODIFIED: 3-card layout */
+        height: 112px;
     }
 
-    /* --- MODIFIED: Mobile River Overrides --- */
+    /* --- Mobile River Overrides --- */
     .river-row {
         display: flex; 
         grid-template-columns: unset;

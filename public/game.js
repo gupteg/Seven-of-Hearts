@@ -153,19 +153,22 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        const scrollContainer = document.getElementById('mobile-scroll-container');
-        const pageIndicator = document.getElementById('page-indicator');
-        if (scrollContainer && pageIndicator) {
-            scrollContainer.addEventListener('scroll', () => {
-                const pageWidth = scrollContainer.offsetWidth;
-                const currentPage = Math.round(scrollContainer.scrollLeft / pageWidth);
-                pageIndicator.innerHTML = '';
-                for (let i = 0; i < 2; i++) {
-                    const dot = document.createElement('div');
-                    dot.className = 'dot';
-                    if (i === currentPage) dot.classList.add('active');
-                    pageIndicator.appendChild(dot);
-                }
+        // --- MODIFIED: Mobile Toggle Button Logic ---
+        const dashboardBtn = document.getElementById('show-dashboard-btn');
+        const tableBtn = document.getElementById('show-table-btn');
+        const gameBoard = document.getElementById('game-board');
+
+        if (dashboardBtn && tableBtn && gameBoard) {
+            dashboardBtn.addEventListener('click', () => {
+                gameBoard.classList.remove('table-view');
+                dashboardBtn.classList.add('active');
+                tableBtn.classList.remove('active');
+            });
+            
+            tableBtn.addEventListener('click', () => {
+                gameBoard.classList.add('table-view');
+                dashboardBtn.classList.remove('active');
+                tableBtn.classList.add('active');
             });
         }
     }
@@ -237,9 +240,11 @@ window.addEventListener('DOMContentLoaded', () => {
         renderScoreboard(gs.players); 
 
         if (isInitialGameRender) {
-            const mobileScroll = document.getElementById('mobile-scroll-container');
-            if (window.innerWidth <= 850 && mobileScroll) {
-                mobileScroll.scrollTo({ left: 0, behavior: 'auto' });
+            // Reset mobile view to dashboard
+            if (window.innerWidth <= 850) {
+                document.getElementById('game-board').classList.remove('table-view');
+                document.getElementById('show-dashboard-btn').classList.add('active');
+                document.getElementById('show-table-btn').classList.remove('active');
             }
             isInitialGameRender = false;
         }
@@ -260,7 +265,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 10000);
     });
     
-    // *** BUG FIX: Corrected typo from 'youWereMarkEDAFK' to 'youWereMarkedAFK' ***
+    
     socket.on('youWereMarkedAFK', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
     });
@@ -380,7 +385,7 @@ window.addEventListener('DOMContentLoaded', () => {
         let table = '<table>';
         table += '<tr><th>Player</th><th class="score-col">Total Score</th></tr>';
         
-        const sortedPlayers = [...players].sort((a, b) => (a.score || 0) - (b.score || 0)); // Sort low to high
+        const sortedPlayers = [...players].sort((a, b) => (a.score || 0) - (b.score || 0)); 
         
         sortedPlayers.forEach(player => {
             table += `<tr>
@@ -436,7 +441,7 @@ window.addEventListener('DOMContentLoaded', () => {
             passBtn.style.display = 'none';
         }
 
-        // *** BUG FIX: Show "End Game" button for host always ***
+        
         endBtn.style.display = me.isHost ? 'block' : 'none';
     }
 
