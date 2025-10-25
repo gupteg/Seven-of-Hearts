@@ -70,6 +70,9 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('show-players-btn').addEventListener('click', () => {
             playersModal.classList.remove('hidden');
         });
+        document.getElementById('show-players-btn-mobile').addEventListener('click', () => { // NEW
+            playersModal.classList.remove('hidden');
+        });
         document.getElementById('players-modal-close').addEventListener('click', () => {
             playersModal.classList.add('hidden');
         });
@@ -80,6 +83,10 @@ window.addEventListener('DOMContentLoaded', () => {
         // --- Game Log Modal ---
         const logModal = document.getElementById('game-log-modal');
         document.getElementById('show-logs-btn').addEventListener('click', () => {
+            renderLogModal(window.gameState.logHistory || []);
+            logModal.classList.remove('hidden');
+        });
+         document.getElementById('show-logs-btn-mobile').addEventListener('click', () => { // NEW
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
         });
@@ -118,15 +125,17 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('warning-modal-ok-btn').addEventListener('click', () => {
             document.getElementById('warning-modal').classList.add('hidden');
         });
-        document.getElementById('return-to-lobby-btn').addEventListener('click', () => {
-            document.getElementById('game-over-modal').classList.add('hidden');
-            // Lobby return is now handled by server after delay
-        });
+        // REMOVED: Game Over "Return to Lobby" button listener
+        
+        // --- Pass Button Listeners ---
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
         });
+        document.getElementById('pass-btn-mobile').addEventListener('click', () => { // NEW
+            socket.emit('passTurn');
+        });
 
-        
+        // --- Round Over Listeners ---
         document.getElementById('round-over-ok-btn').addEventListener('click', () => {
             document.getElementById('round-over-modal').classList.add('hidden');
             document.getElementById('waiting-for-host-modal').classList.remove('hidden');
@@ -135,7 +144,6 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('requestNextRound');
             document.getElementById('round-over-modal').classList.add('hidden');
         });
-        // NEW: Round Over End Game Button
         document.getElementById('round-over-end-game-btn').addEventListener('click', () => {
             document.getElementById('round-over-modal').classList.add('hidden');
             document.getElementById('confirm-end-game-modal').classList.remove('hidden');
@@ -543,16 +551,23 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function renderMyActions(me, gs) {
         const passBtn = document.getElementById('pass-btn');
+        const passBtnMobile = document.getElementById('pass-btn-mobile'); // NEW
         const endBtn = document.getElementById('in-game-end-btn');
 
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
-            passBtn.style.display = 'block';
             const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
-            passBtn.disabled = validMoves.length > 0;
+            const canPass = validMoves.length === 0;
+            
+            passBtn.style.display = 'block';
+            passBtn.disabled = !canPass;
+            
+            passBtnMobile.style.display = 'block'; // NEW
+            passBtnMobile.disabled = !canPass; // NEW
+            
         } else {
             passBtn.style.display = 'none';
+            passBtnMobile.style.display = 'none'; // NEW
         }
-
         
         endBtn.style.display = me.isHost ? 'block' : 'none';
     }
