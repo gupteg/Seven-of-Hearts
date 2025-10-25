@@ -20,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     let isInitialGameRender = true;
     let pauseCountdownInterval;
-    let lobbyReturnInterval;
+    let pauseCountdownIntervalMobile; // NEW: For second banner
     
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
@@ -225,6 +225,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-board').style.display = 'none';
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'block';
+        
+        // Hide game-over modal in case it's lingering
+        document.getElementById('game-over-modal').classList.add('hidden');
+        
         renderLobby(players);
     });
 
@@ -279,8 +283,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // *** NEW: Listener for Game Over announcement ***
+    // *** MODIFIED: Listener for Game Over announcement, now clears modals ***
     socket.on('gameOverAnnouncement', ({ winnerNames }) => {
+        // BUG FIX: Force close round-end modals
+        document.getElementById('round-over-modal').classList.add('hidden');
+        document.getElementById('waiting-for-host-modal').classList.add('hidden');
+    
         let winnerText = "";
         if (winnerNames.length === 1) {
             winnerText = winnerNames[0] + " wins the Game!";
@@ -371,8 +379,11 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderGameOver(logHistory) {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
+        
+        // MODIFIED: Manually build scoreboard table here to apply correct styles
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
         document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; 
+        
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
@@ -501,6 +512,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderMyInfo(me) {
         document.getElementById('my-name').textContent = `${me.name} (You) ${me.isHost ? '👑' : ''}`;
         document.getElementById('my-score').textContent = me.score || 0;
+        document.getElementById('my-card-count').textContent = me.hand ? me.hand.length : 0; // NEW
     }
 
     function renderMyHand(me, gs) {
@@ -611,15 +623,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function renderGameStatusBanner(gs, me) {
         const banner = document.getElementById('game-status-banner');
+        const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
+        
         if (gs.isPaused) {
             updatePauseBanner(gs);
             return;
         }
         if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
+        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile); // NEW
 
         const currentPlayer = gs.players.find(p => p.playerId === gs.currentPlayerId);
         if (!currentPlayer) {
             banner.textContent = "Waiting for game to start...";
+            bannerMobile.textContent = "Waiting for game to start..."; // NEW
             return;
         }
 
@@ -627,26 +643,40 @@ window.addEventListener('DOMContentLoaded', () => {
         const latestLog = gs.logHistory[0] || "Game Started.";
         const roundText = `(Round ${gs.currentRound || 1})`;
         
+        let bannerText = "";
         if (currentPlayer.playerId === me.playerId) {
-            banner.textContent = `YOUR TURN. ${roundText} (${latestLog})`;
-            // Warnings removed from here, handled by move announcement logic potentially
+            bannerText = `YOUR TURN. ${roundText} (${latestLog})`;
         } else {
             const name = currentPlayer.isBot ? `[Bot] ${currentPlayer.name}` : currentPlayer.name;
-            banner.textContent = `Waiting for ${name}... ${roundText} (${latestLog})`;
+            bannerText = `Waiting for ${name}... ${roundText} (${latestLog})`;
         }
+        
+        banner.textContent = bannerText;
+        bannerMobile.textContent = bannerText; // NEW
     }
     
     function updatePauseBanner(gs) {
         const banner = document.getElementById('game-status-banner');
-        if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
+        const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
         
-        const updateBanner = () => {
+        if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
+        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile); // NEW
+        
+        const updateBanners = () => {
             const remaining = Math.max(0, Math.round((gs.pauseEndTime - Date.now()) / 1000));
-            banner.innerHTML = `⏳ Game Paused. Waiting for ${gs.pausedForPlayerNames.join(', ')}... (${remaining}s) ⏳`;
-            if (remaining === 0) clearInterval(pauseCountdownInterval);
+            const bannerText = `⏳ Game Paused. Waiting for ${gs.pausedForPlayerNames.join(', ')}... (${remaining}s) ⏳`;
+            
+            banner.innerHTML = bannerText;
+            bannerMobile.innerHTML = bannerText; // NEW
+
+            if (remaining === 0) {
+                clearInterval(pauseCountdownInterval);
+                clearInterval(pauseCountdownIntervalMobile); // NEW
+            }
         };
-        updateBanner();
-        pauseCountdownInterval = setInterval(updateBanner, 1000);
+        updateBanners();
+        pauseCountdownInterval = setInterval(updateBanners, 1000);
+        pauseCountdownIntervalMobile = setInterval(updateBanners, 1000); // NEW
     }
     
     function renderLogModal(logHistory) {

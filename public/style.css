@@ -106,7 +106,18 @@ body {
     flex-shrink: 0; 
 }
 #my-info-panel h3 { margin: 0 0 10px 0; color: var(--light-text); }
-.my-score-box { font-size: 1.2em; }
+.my-score-box { 
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-size: 1.2em;
+    flex-wrap: wrap;
+}
+.score-item {
+    padding: 5px 10px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 5px;
+}
 .my-score-box .score-value { font-size: 1.5em; font-weight: bold; color: var(--gold-accent); margin-left: 10px; }
 
 /* Wrappable Hand Container */
@@ -261,6 +272,20 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     flex-shrink: 0;
 }
+/* NEW: Mobile-only dashboard banner */
+#dashboard-status-banner {
+    padding: 10px;
+    text-align: center;
+    font-size: 1em;
+    font-weight: bold;
+    background-color: var(--parchment-bg);
+    color: var(--dark-text);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    flex-shrink: 0;
+    display: none; /* Hidden by default */
+}
+
 
 #river-container {
     display: flex;
@@ -439,25 +464,32 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 
 
 /* --- Scoreboard & Final Hands Styles --- */
-#round-over-scoreboard table {
+/* MODIFIED: Apply to both round over and game over scoreboards */
+#round-over-scoreboard table,
+#game-over-scoreboard table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 10px;
 }
 #round-over-scoreboard th,
-#round-over-scoreboard td {
+#round-over-scoreboard td,
+#game-over-scoreboard th,
+#game-over-scoreboard td {
     padding: 8px 12px;
     border: 1px solid var(--teak-light);
     text-align: left;
 }
-#round-over-scoreboard th {
+#round-over-scoreboard th,
+#game-over-scoreboard th {
     background-color: var(--teak-light);
     color: var(--light-text);
 }
-#round-over-scoreboard tr:nth-child(even) {
+#round-over-scoreboard tr:nth-child(even),
+#game-over-scoreboard tr:nth-child(even) {
     background-color: rgba(0,0,0,0.05);
 }
-#round-over-scoreboard .score-col {
+#round-over-scoreboard .score-col,
+#game-over-scoreboard .score-col {
     text-align: right;
     font-weight: bold;
 }
@@ -597,6 +629,27 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         height: 100%;
         padding: 0;
         gap: 0;
+    }
+    
+    /* --- NEW: Compact Info Panel --- */
+    #my-info-panel {
+        padding: 10px;
+    }
+    #my-info-panel h3 {
+        margin-bottom: 8px;
+        font-size: 1.1em;
+    }
+    .my-score-box {
+        font-size: 1em;
+        gap: 10px;
+    }
+    .my-score-box .score-value {
+        font-size: 1.2em;
+    }
+    
+    /* --- NEW: Show mobile banner --- */
+    #dashboard-status-banner {
+        display: block;
     }
 
     /* --- Mobile Toggle Layout --- */

@@ -55,10 +55,18 @@
                 <div id="my-info-panel" class="info-panel">
                     <h3 id="my-name">Player Name</h3>
                     <div class="my-score-box">
-                        <span>Score:</span>
-                        <span id="my-score" class="score-value">0</span>
+                        <div class="score-item">
+                            <span>Score:</span>
+                            <span id="my-score" class="score-value">0</span>
+                        </div>
+                        <div class="score-item">
+                            <span>Cards:</span>
+                            <span id="my-card-count" class="score-value">0</span>
+                        </div>
                     </div>
                 </div>
+                
+                <div id="dashboard-status-banner"></div>
 
                 <div class="panel-header"><h4>My Hand</h4></div>
                 <div id="my-hand-container">
@@ -71,12 +79,7 @@
                     <button id="in-game-end-btn" class="action-btn danger-btn" style="display: none;">End Game</button>
                 </div>
 
-                <div class="panel-header"><h4>Other Players</h4></div>
-                
-                <p>Click "Show Players" to see the table.</p>
-
-
-            </div> <div id="table-column" class="game-column">
+                </div> <div id="table-column" class="game-column">
                 
                 <div id="game-status-banner">
                     Waiting for game to start...
