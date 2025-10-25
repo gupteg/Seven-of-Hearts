@@ -46,6 +46,8 @@
 
     <div id="game-board" style="display: none;">
         
+        <div id="move-announcement-banner" class="hidden"></div>
+
         <div id="mobile-scroll-container">
 
             <div id="dashboard-column" class="game-column">
@@ -81,10 +83,11 @@
                             </tr>
                         </thead>
                         <tbody id="other-players-table-body">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
-                </div> <div id="table-column" class="game-column">
+
+            </div> <div id="table-column" class="game-column">
                 
                 <div id="game-status-banner">
                     Waiting for game to start...
@@ -98,6 +101,14 @@
             <button id="show-table-btn" class="page-toggle-btn">Table</button>
         </div>
 
+    </div>
+
+    <div id="winner-announcement-overlay" class="fullscreen-overlay hidden">
+        <div id="winner-announcement-content">
+            <h1 id="winner-announcement-text"></h1>
+            <p id="winner-announcement-subtext"></p>
+            <div id="winner-animation-container"></div>
+        </div>
     </div>
 
     <div id="game-log-modal" class="modal hidden">
@@ -168,7 +179,7 @@
             <div class="modal-header">
                 <h2>Hard Reset Session</h2>
             </div>
-            <p>Are you sure? This will end any active game and remove all other players from the lobby.</p>
+            <p>Are you sure? This will disconnect all players (including you) and reset the server.</p>
             <div class="modal-actions">
                 <button id="confirm-reset-yes-btn" class="danger-btn">Yes, Hard Reset</button>
                 <button id="confirm-reset-no-btn">No, Cancel</button>
@@ -194,8 +205,11 @@
                 <h2 id="round-over-title">Round Over!</h2>
             </div>
             <p id="round-over-winner-text"></p>
-            <div class="modal-scrollable-content" id="round-over-scoreboard">
-            </div>
+            <div class="modal-scrollable-content">
+                <div id="round-over-scoreboard"></div>
+                <h4 class="final-hands-header">Final Hands:</h4>
+                <div id="round-over-hands"></div>
+                </div>
             <div class="modal-actions">
                 <button id="round-over-ok-btn" class="confirm-btn">OK</button>
                 <button id="start-next-round-btn" class="confirm-btn" style="display: none;">Start Next Round</button>

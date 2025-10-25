@@ -4,8 +4,10 @@ window.addEventListener('DOMContentLoaded', () => {
     window.gameState = {};
     let myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
     let myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
+    let previousGameState = null; // For move announcement diff
+    let moveAnnouncementTimeout = null; // Timer for move announcement
+    let rainInterval = null; // Timer for rain animation
     
-    // Card Naming Maps for SVGs
     const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
     const RANK_MAP = {
         'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -56,7 +58,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } 
             });
         });
-        // "End Session" button listener removed (button deleted from HTML)
+        
         document.getElementById('hard-reset-btn').addEventListener('click', () => {
             document.getElementById('confirm-hard-reset-modal').classList.remove('hidden');
         });
@@ -83,7 +85,7 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('scoreboard-modal').classList.add('hidden');
         });
         document.getElementById('confirm-end-yes-btn').addEventListener('click', () => {
-            socket.emit('endSession');
+            socket.emit('endSession'); // Server now handles delay
             document.getElementById('confirm-end-game-modal').classList.add('hidden');
         });
         document.getElementById('confirm-end-no-btn').addEventListener('click', () => {
@@ -105,9 +107,7 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('return-to-lobby-btn').addEventListener('click', () => {
             document.getElementById('game-over-modal').classList.add('hidden');
-            document.getElementById('game-board').style.display = 'none';
-            document.getElementById('lobby-screen').style.display = 'block';
-            isInitialGameRender = true;
+            // Lobby return is now handled by server after delay
         });
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
@@ -132,7 +132,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // *** MODIFIED: Listener now on table body ***
+        
         document.getElementById('other-players-table-body').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
              if (afkBtn) {
@@ -152,7 +152,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // --- MODIFIED: Mobile Toggle Button Logic ---
+        // --- Mobile Toggle Button Logic ---
         const dashboardBtn = document.getElementById('show-dashboard-btn');
         const tableBtn = document.getElementById('show-table-btn');
         const gameBoard = document.getElementById('game-board');
@@ -221,6 +221,11 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
         console.log('Received GameState:', gs);
+        
+        // *** NEW: Handle Move Announcement ***
+        handleMoveAnnouncement(gs, previousGameState);
+        previousGameState = JSON.parse(JSON.stringify(gs)); // Deep clone for next comparison
+
         window.gameState = gs;
         
         document.getElementById('join-screen').style.display = 'none';
@@ -249,18 +254,41 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     
+    // *** MODIFIED: Show announcement BEFORE modal ***
     socket.on('roundOver', (data) => {
-        renderRoundOverModal(data);
+        showWinnerAnnouncement(data.winnerName + " wins the Round!", null, 5000, () => {
+            renderRoundOverModal(data); // Show modal AFTER announcement
+        });
+    });
+
+    // *** NEW: Listener for Game Over announcement ***
+    socket.on('gameOverAnnouncement', ({ winnerNames }) => {
+        let winnerText = "";
+        if (winnerNames.length === 1) {
+            winnerText = winnerNames[0] + " wins the Game!";
+        } else if (winnerNames.length > 1) {
+            winnerText = "Joint Winners: " + winnerNames.join(', ') + "!";
+        } else {
+             winnerText = "Game Over!"; // Fallback
+        }
+        const subtext = "You will be taken to the lobby shortly...";
+        // Show announcement for 15 seconds, no callback needed
+        // The server will trigger 'gameEnded' after the delay
+        showWinnerAnnouncement(winnerText, subtext, 15000, null); 
     });
     
+    // *** MODIFIED: Hide winner announcement when gameEnded arrives ***
     socket.on('gameEnded', ({ logHistory }) => {
-        renderGameOver(logHistory);
+        hideWinnerAnnouncement(); // Hide overlay immediately
+        renderGameOver(logHistory); // Show final modal briefly
+        
+        // The server will emit lobbyUpdate after this to switch screens
         if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
         lobbyReturnInterval = setInterval(() => {
              document.getElementById('game-over-modal').classList.add('hidden');
-             isInitialGameRender = true;
+             isInitialGameRender = true; // Reset view state for lobby
              clearInterval(lobbyReturnInterval);
-        }, 10000);
+        }, 3000); // Short delay to see final modal
     });
     
     
@@ -334,15 +362,16 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
-    
+    // *** MODIFIED: Render final hands ***
     function renderRoundOverModal(data) {
-        const { scoreboard, winnerName, roundNumber } = data;
+        const { scoreboard, winnerName, roundNumber, finalHands } = data;
         const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
 
         document.getElementById('round-over-title').textContent = `Round ${roundNumber} Complete!`;
         document.getElementById('round-over-winner-text').textContent = `🎉 ${winnerName} won the round! 🎉`;
         
         renderRoundScoreboardTable(scoreboard);
+        renderFinalHands(finalHands, scoreboard); // New function call
 
         if (me && me.isHost) {
             document.getElementById('start-next-round-btn').style.display = 'block';
@@ -370,6 +399,63 @@ window.addEventListener('DOMContentLoaded', () => {
         
         table += '</table>';
         container.innerHTML = table;
+    }
+    
+    // *** NEW: Render Final Hands in Modal ***
+    function renderFinalHands(finalHands, scoreboardData) {
+        const container = document.getElementById('round-over-hands');
+        container.innerHTML = '';
+        const numDecks = window.gameState?.settings?.deckCount || 1;
+
+        if (!finalHands || !scoreboardData) return;
+
+        // Display in scoreboard order
+        scoreboardData.forEach(scoreEntry => {
+            // Find player ID from name (slightly inefficient but necessary)
+            const player = window.gameState.players.find(p => p.name === scoreEntry.name.replace(' [Bot]',''));
+            if (!player) return;
+
+            const hand = finalHands[player.playerId];
+            const handDiv = document.createElement('div');
+            handDiv.className = 'player-hand-display';
+            
+            const nameEl = document.createElement('div');
+            nameEl.className = 'player-hand-name';
+            nameEl.textContent = scoreEntry.name + ':'; // Use name from scoreboard (includes [Bot])
+            handDiv.appendChild(nameEl);
+
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'player-hand-cards';
+            if (hand && hand.length > 0) {
+                 // Sort hand for display
+                 const sortedHand = hand.sort((a, b) => {
+                    if (SUITS_ORDER[a.suit] !== SUITS_ORDER[b.suit]) return SUITS_ORDER[a.suit] - SUITS_ORDER[b.suit];
+                    return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
+                });
+                sortedHand.forEach(card => {
+                    cardsContainer.appendChild(createSmallCardImage(card, numDecks));
+                });
+            } else {
+                cardsContainer.textContent = '(Empty)';
+            }
+            handDiv.appendChild(cardsContainer);
+            container.appendChild(handDiv);
+        });
+    }
+    // *** NEW: Helper for small card images ***
+    function createSmallCardImage(card, numDecks) {
+         const img = document.createElement('img');
+        img.className = 'final-card-img'; // Use new class for smaller size
+        const suit = SUIT_MAP[card.suit];
+        const rank = RANK_MAP[card.rank];
+        img.src = `/assets/cards/${suit}_${rank}.svg`;
+        img.alt = `${card.rank} of ${card.suit}`;
+        
+        const deckIndex = card.id.split('-')[2];
+        if (numDecks == 2 && deckIndex === '1') {
+            img.classList.add('deck-1-tint'); // Apply tint border
+        }
+        return img;
     }
 
     function renderScoreboard(players) {
@@ -443,7 +529,7 @@ window.addEventListener('DOMContentLoaded', () => {
         endBtn.style.display = me.isHost ? 'block' : 'none';
     }
 
-    // *** MODIFIED: Rewritten to build a table ***
+    
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
         const tableBody = document.getElementById('other-players-table-body');
         const actionHeader = document.getElementById('host-action-col-header');
@@ -458,29 +544,29 @@ window.addEventListener('DOMContentLoaded', () => {
                 row.classList.add('active-player-row');
             }
 
-            // --- Player Cell ---
+            
             let status = '';
             if (player.isBot) {
                 status = '<span class="other-player-status bot">[Bot]</span>';
             } else if (player.status === 'Disconnected') {
                 status = '<span class="other-player-status reconnecting">Offline</span>';
             }
-            const dealerIcon = (player.playerId === dealerId) ? ' (D)' : ''; // Short for table
+            const dealerIcon = (player.playerId === dealerId) ? ' (D)' : ''; 
             
             const playerCell = document.createElement('td');
             playerCell.innerHTML = `${player.name} ${player.isHost ? '👑' : ''} ${dealerIcon} ${status}`;
             
-            // --- Cards Cell ---
+            
             const cardsCell = document.createElement('td');
             cardsCell.className = 'col-cards';
             cardsCell.textContent = player.hand ? player.hand.length : 0;
             
-            // --- Score Cell ---
+            
             const scoreCell = document.createElement('td');
             scoreCell.className = 'col-score';
             scoreCell.textContent = player.score || 0;
 
-            // --- Action Cell (for Host) ---
+            
             const actionCell = document.createElement('td');
             actionCell.className = 'col-action';
             if (me.isHost && player.status === 'Active' && !player.isBot) {
@@ -495,11 +581,11 @@ window.addEventListener('DOMContentLoaded', () => {
             tableBody.appendChild(row);
         });
         
-        // Show/hide the action column header
+        
         if (actionHeader) {
             actionHeader.style.display = showActionColumn ? '' : 'none';
         }
-        // Hide all action cells if not needed
+        
         document.querySelectorAll('#other-players-table .col-action').forEach(cell => {
             cell.style.display = showActionColumn ? '' : 'none';
         });
@@ -519,16 +605,13 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        // Use stored previous log for move banner, current log for status banner
         const latestLog = gs.logHistory[0] || "Game Started.";
         const roundText = `(Round ${gs.currentRound || 1})`;
         
         if (currentPlayer.playerId === me.playerId) {
             banner.textContent = `YOUR TURN. ${roundText} (${latestLog})`;
-            if (gs.isFirstMove && !me.hand.find(c => c.id === '7-Hearts-0')) { 
-                 showWarning("Your Turn", "You do not have the 7 of Hearts. You must pass.");
-            } else if (gs.isFirstMove) {
-                 showWarning("Your Turn", "You must play the 7 of Hearts to begin.");
-            }
+            // Warnings removed from here, handled by move announcement logic potentially
         } else {
             const name = currentPlayer.isBot ? `[Bot] ${currentPlayer.name}` : currentPlayer.name;
             banner.textContent = `Waiting for ${name}... ${roundText} (${latestLog})`;
@@ -731,6 +814,124 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
         return validMoves;
+    }
+    
+    // *** NEW: Move Announcement Logic ***
+    function handleMoveAnnouncement(currentState, prevState) {
+        if (!prevState || !currentState || !currentState.logHistory || currentState.logHistory.length === 0) {
+            return; // No previous state or no logs
+        }
+        
+        const latestLog = currentState.logHistory[0];
+        const previousLog = prevState.logHistory[0];
+
+        if (latestLog === previousLog || latestLog.includes('Starting') || latestLog.includes('won') || latestLog.includes('Game initialized')) {
+             return; // No new move or it's a game start/end log
+        }
+
+        let message = "";
+        const nextPlayer = currentState.players.find(p => p.playerId === currentState.currentPlayerId);
+        const nextPlayerName = nextPlayer ? (nextPlayer.isBot ? `[Bot] ${nextPlayer.name}` : nextPlayer.name) : "Unknown";
+
+        // Try to parse the log message
+        const playedMatch = latestLog.match(/^(.+?) played the (.+ of .+)\./);
+        const passedMatch = latestLog.match(/^(.+?) passed\./);
+
+        if (playedMatch) {
+            const playerName = playedMatch[1];
+            const cardName = playedMatch[2];
+            message = `${playerName} played ${cardName}; Next turn: ${nextPlayerName}`;
+        } else if (passedMatch) {
+            const playerName = passedMatch[1];
+             message = `${playerName} skipped; Next turn: ${nextPlayerName}`;
+        } else {
+            // Fallback if parsing fails - show raw log
+            message = latestLog + ` | Next: ${nextPlayerName}`;
+        }
+
+        showMoveAnnouncement(message);
+    }
+    
+    function showMoveAnnouncement(message) {
+        const banner = document.getElementById('move-announcement-banner');
+        if (!banner) return;
+
+        banner.textContent = message;
+        banner.classList.add('visible');
+
+        // Clear any existing timer
+        if (moveAnnouncementTimeout) {
+            clearTimeout(moveAnnouncementTimeout);
+        }
+
+        // Set new timer to hide
+        moveAnnouncementTimeout = setTimeout(() => {
+            banner.classList.remove('visible');
+            moveAnnouncementTimeout = null;
+        }, 3000); // Display for 3 seconds
+    }
+    
+    // *** NEW: Winner Announcement Logic ***
+    function showWinnerAnnouncement(mainText, subText, duration, callback) {
+        const overlay = document.getElementById('winner-announcement-overlay');
+        const textElement = document.getElementById('winner-announcement-text');
+        const subtextElement = document.getElementById('winner-announcement-subtext');
+        
+        if (!overlay || !textElement || !subtextElement) return;
+
+        textElement.textContent = mainText;
+        subtextElement.textContent = subText || ''; // Show subtext if provided
+        overlay.classList.remove('hidden');
+        startRainAnimation();
+
+        setTimeout(() => {
+            hideWinnerAnnouncement();
+            if (callback) {
+                callback(); // Execute callback after duration (e.g., show score modal)
+            }
+        }, duration);
+    }
+    
+    function hideWinnerAnnouncement() {
+         const overlay = document.getElementById('winner-announcement-overlay');
+         if (overlay) overlay.classList.add('hidden');
+         stopRainAnimation();
+    }
+    
+    // *** NEW: Rain Animation ***
+    function startRainAnimation() {
+        const container = document.getElementById('winner-animation-container');
+        if (!container || rainInterval) return; // Prevent multiple intervals
+
+        const elements = ['⭐', '🌸', '✨', '🎉', '🌟']; // Emojis to rain down
+
+        rainInterval = setInterval(() => {
+            const rainElement = document.createElement('div');
+            rainElement.classList.add('rain-element');
+            rainElement.textContent = elements[Math.floor(Math.random() * elements.length)];
+            rainElement.style.left = Math.random() * 100 + 'vw';
+            rainElement.style.animationDuration = (Math.random() * 2 + 3) + 's'; // Duration between 3-5 seconds
+            rainElement.style.fontSize = (Math.random() * 1 + 1) + 'em'; // Size between 1-2em
+
+            container.appendChild(rainElement);
+
+            // Remove element after it falls
+            setTimeout(() => {
+                rainElement.remove();
+            }, 5000); // Corresponds to max animation duration
+
+        }, 100); // Create new element every 100ms
+    }
+
+    function stopRainAnimation() {
+        const container = document.getElementById('winner-animation-container');
+        if (rainInterval) {
+            clearInterval(rainInterval);
+            rainInterval = null;
+        }
+        if (container) {
+            container.innerHTML = ''; // Clear existing rain elements
+        }
     }
     
     function makeDraggable(modal) {

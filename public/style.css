@@ -50,6 +50,7 @@ body {
     gap: 15px;
     height: calc(100vh - 30px); 
     max-height: calc(100vh - 30px);
+    position: relative; /* Needed for announcement banner */
 }
 
 #mobile-scroll-container {
@@ -154,13 +155,13 @@ body {
 .action-btn.danger-btn:hover:not(:disabled) { background-color: #e04462; }
 
 
-/* --- MODIFIED: Other Players Table --- */
+/* --- Other Players Table --- */
 #other-players-table-container {
     flex-grow: 1;
     flex-shrink: 1;
-    overflow-y: auto; /* Makes the table scrollable */
+    overflow-y: auto; 
     min-height: 100px;
-    max-height: 250px; /* Max height for desktop */
+    max-height: 250px; 
     background: rgba(0,0,0,0.1);
     padding: 10px;
     border-radius: 8px;
@@ -428,7 +429,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 /* --- END: Buttons --- */
 
 
-/* --- Scoreboard Table Styles --- */
+/* --- Scoreboard & Final Hands Styles --- */
 #round-over-scoreboard table {
     width: 100%;
     border-collapse: collapse;
@@ -451,7 +452,123 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     text-align: right;
     font-weight: bold;
 }
-/* --- END: Scoreboard Table Styles --- */
+
+.final-hands-header {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    color: var(--teak-dark);
+}
+#round-over-hands .player-hand-display {
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed var(--teak-light);
+}
+#round-over-hands .player-hand-display:last-child {
+    border-bottom: none;
+}
+#round-over-hands .player-hand-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+#round-over-hands .player-hand-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+#round-over-hands .final-card-img {
+    width: 40px;
+    height: auto;
+    border-radius: 3px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+/* --- END: Scoreboard/Hands --- */
+
+
+/* --- NEW: Announcement Styles --- */
+#move-announcement-banner {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: var(--gold-accent);
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-size: 1.1em;
+    font-weight: bold;
+    z-index: 1001;
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+    pointer-events: none;
+    white-space: nowrap;
+}
+#move-announcement-banner.visible {
+    opacity: 1;
+}
+
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden; /* For rain */
+}
+.fullscreen-overlay.hidden {
+    display: none;
+}
+#winner-announcement-text {
+    font-size: clamp(2.5em, 8vw, 6em); /* Responsive font size */
+    margin: 0;
+    font-weight: bold;
+    animation: flash-colors 1s infinite alternate;
+}
+#winner-announcement-subtext {
+    font-size: clamp(1em, 3vw, 1.5em);
+    margin-top: 10px;
+    color: #eee;
+}
+
+@keyframes flash-colors {
+    0% { color: #ffeb3b; text-shadow: 0 0 10px #ffeb3b; }
+    50% { color: #ff9800; text-shadow: 0 0 10px #ff9800; }
+    100% { color: #e91e63; text-shadow: 0 0 10px #e91e63; }
+}
+
+/* Rain Animation */
+#winner-animation-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+.rain-element {
+    position: absolute;
+    bottom: 100%;
+    font-size: 1.5em;
+    animation: fall linear infinite;
+    opacity: 0.8;
+}
+@keyframes fall {
+    to {
+        transform: translateY(100vh);
+        opacity: 0;
+    }
+}
+/* --- END: Announcement Styles --- */
 
 
 /* --- Mobile Responsive Styles --- */
@@ -468,7 +585,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         gap: 0;
     }
 
-    /* --- MODIFIED: Mobile Toggle Layout --- */
+    /* --- Mobile Toggle Layout --- */
     #mobile-scroll-container {
         display: flex;
         flex-direction: column; 
@@ -503,11 +620,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 
 
     #dashboard-column {
-        padding-bottom: 50px; 
+        padding-bottom: 60px; /* MODIFIED: More space */
     }
     #table-column {
         border: none;
-        padding-bottom: 50px; 
+        padding-bottom: 60px; /* MODIFIED: More space */
     }
 
     /* --- MODIFIED: Page Indicator Toggle Bar --- */
@@ -540,7 +657,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 
 
     .card-img {
-        width: 80px; /* MODIFIED: 3-card layout */
+        width: 80px; /* 3-card layout */
         height: 112px;
     }
 
@@ -580,5 +697,30 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         margin-right: 5px; 
     }
     /* --- END: Mobile River Overrides --- */
+    
+    /* MODIFIED: Add padding below player table on mobile */
+    #other-players-table-container {
+        padding-bottom: 60px;
+        max-height: none; /* Allow full scroll on mobile */
+    }
+    
+    /* MODIFIED: Final hands below scoreboard on mobile */
+    #round-over-modal .modal-scrollable-content {
+        display: flex;
+        flex-direction: column;
+    }
+    .final-hands-header {
+        margin-top: 15px; /* Add space */
+    }
+    
+    /* Adjust announcement text size for mobile */
+    #winner-announcement-text {
+        font-size: clamp(2em, 10vw, 4em);
+    }
+    #move-announcement-banner {
+        font-size: 1em;
+        top: 5px;
+        max-width: 90%;
+    }
 }
 /* --- END: Mobile --- */
