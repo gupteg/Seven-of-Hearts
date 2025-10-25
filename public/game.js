@@ -798,10 +798,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // *** MODIFIED: Corrected Placeholder Logic ***
     function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
         const row = document.createElement('div');
         row.className = 'river-row';
 
+        // Add Desktop Label (Logic remains the same)
         if (!isMobile) {
             const labelEl = document.createElement('div');
             labelEl.className = 'river-row-label';
@@ -815,12 +817,18 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!layout) {
+             // --- Placeholder Logic ---
              if (isMobile) {
+                 // Mobile: Single placeholder div with text
+                const placeholder = document.createElement('div');
+                placeholder.className = 'river-placeholder';
                 const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
-                row.innerHTML = `<div class="river-placeholder">${label}</div>`;
+                placeholder.textContent = label;
+                row.appendChild(placeholder); // Use appendChild
              } else {
+                 // Desktop: Grid of 13 placeholders
                 ALL_RANKS.forEach((rank, i) => {
-                    if (i === 6) {
+                    if (i === 6) { // 7
                         row.appendChild(createRiverPlaceholder('7'));
                     } else {
                         row.appendChild(createEmptyPlaceholder());
@@ -828,6 +836,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
              }
         } else {
+            // --- Card Rendering Logic (Remains the same) ---
             const lowRankVal = layout.low;
             const highRankVal = layout.high;
 
@@ -865,11 +874,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        return row;
+        return row; // Always return the created row element
     }
 
 
-    // *** NEW: Client-side logic for fungible move validation ***
+    // *** Client-side logic for fungible move validation ***
     function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
         if (isFirstMove) {
             return card.id === '7-Hearts-c1';
@@ -897,7 +906,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // *** NEW: Client-side logic for strict move validation ***
+    // *** Client-side logic for strict move validation ***
     function checkValidMoveStrict(card, boardState, hand, isFirstMove) {
         if (isFirstMove) {
             return card.id === '7-Hearts-0';
@@ -919,7 +928,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return false;
     }
 
-    // *** MODIFIED: This function now correctly calls the new helpers ***
+    // *** This function now correctly calls the helpers ***
     function getValidMoves(hand, gs) {
         if (!hand) return [];
         
@@ -935,7 +944,7 @@ window.addEventListener('DOMContentLoaded', () => {
             
             const validMoves = [];
             for (const card of hand) {
-                if (checkValidMoveFungible(card, boardState, hand, false)) { // This function now exists
+                if (checkValidMoveFungible(card, boardState, hand, false)) {
                     validMoves.push(card);
                 }
             }
@@ -950,7 +959,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const validMoves = [];
             for (const card of hand) {
-                if (checkValidMoveStrict(card, boardState, hand, false)) { // This function now exists
+                if (checkValidMoveStrict(card, boardState, hand, false)) {
                     validMoves.push(card);
                 }
             }
