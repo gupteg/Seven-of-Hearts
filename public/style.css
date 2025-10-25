@@ -161,7 +161,6 @@ body {
     flex-shrink: 1;
     overflow-y: auto; 
     min-height: 100px;
-    max-height: 250px; 
     background: rgba(0,0,0,0.1);
     padding: 10px;
     border-radius: 8px;
@@ -282,6 +281,16 @@ body {
     grid-template-columns: repeat(13, 1fr);
     align-items: center;
     gap: 2px; 
+}
+.river-row-label {
+    grid-column: 1 / 14; /* Span all 13 columns */
+    text-align: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: var(--gold-accent);
+    padding-bottom: 5px;
+    border-bottom: 1px solid rgba(218, 165, 32, 0.2);
+    margin-bottom: 5px;
 }
 .river-card {
     border-radius: 4px;
@@ -487,9 +496,9 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 /* --- NEW: Announcement Styles --- */
 #move-announcement-banner {
     position: absolute;
-    top: 10px;
+    top: 50%;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, -50%);
     background-color: rgba(0, 0, 0, 0.8);
     color: var(--gold-accent);
     padding: 8px 15px;
@@ -569,6 +578,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     }
 }
 /* --- END: Announcement Styles --- */
+
+/* HIDE mobile toggle bar on desktop */
+#page-indicator {
+    display: none;
+}
 
 
 /* --- Mobile Responsive Styles --- */
@@ -669,6 +683,10 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         overflow-x: hidden; 
         min-height: 110px; 
     }
+    /* HIDE new desktop label on mobile */
+    .river-row-label {
+        display: none;
+    }
     .river-card {
         width: 70px; 
         height: 98px;
@@ -719,7 +737,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     }
     #move-announcement-banner {
         font-size: 1em;
-        top: 5px;
+        top: 50%; /* Already set, but good to confirm */
         max-width: 90%;
     }
 }

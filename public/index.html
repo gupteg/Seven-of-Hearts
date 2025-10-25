@@ -66,26 +66,15 @@
 
                 <div id="my-actions-panel">
                     <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
+                    <button id="show-players-btn" class="action-btn secondary-btn">Show Players</button>
                     <button id="show-logs-btn" class="action-btn secondary-btn">Show Logs</button>
                     <button id="in-game-end-btn" class="action-btn danger-btn" style="display: none;">End Game</button>
                 </div>
 
                 <div class="panel-header"><h4>Other Players</h4></div>
                 
-                <div id="other-players-table-container">
-                    <table id="other-players-table">
-                        <thead>
-                            <tr>
-                                <th>Player</th>
-                                <th class="col-cards">Cards</th>
-                                <th class="col-score">Score</th>
-                                <th id="host-action-col-header" class="col-action">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="other-players-table-body">
-                        </tbody>
-                    </table>
-                </div>
+                <p>Click "Show Players" to see the table.</p>
+
 
             </div> <div id="table-column" class="game-column">
                 
@@ -125,6 +114,35 @@
         </div>
     </div>
 
+    <div id="players-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Players</h2>
+                <button id="players-modal-close" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-scrollable-content">
+                <div id="other-players-table-container">
+                    <table id="other-players-table">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th class="col-cards">Cards</th>
+                                <th class="col-score">Score</th>
+                                <th id="host-action-col-header" class="col-action">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="players-modal-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="players-modal-ok-btn" class="confirm-btn">OK</button>
+            </div>
+        </div>
+    </div>
+
+
     <div id="scoreboard-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -143,6 +161,7 @@
             </div>
             <p id="game-over-winner-text"></p>
             <div id="game-over-scoreboard"></div>
+            <p id="game-over-lobby-caption">You are shortly being taken to the Lobby...</p>
             <div class="modal-actions">
                 <button id="return-to-lobby-btn">Return to Lobby</button>
             </div>
@@ -213,6 +232,7 @@
             <div class="modal-actions">
                 <button id="round-over-ok-btn" class="confirm-btn">OK</button>
                 <button id="start-next-round-btn" class="confirm-btn" style="display: none;">Start Next Round</button>
+                <button id="round-over-end-game-btn" class="danger-btn" style="display: none;">End Game</button>
             </div>
         </div>
     </div>

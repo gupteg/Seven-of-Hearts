@@ -65,14 +65,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function setupModalAndButtonListeners() {
+        // --- Player List Modal ---
+        const playersModal = document.getElementById('players-modal');
+        document.getElementById('show-players-btn').addEventListener('click', () => {
+            playersModal.classList.remove('hidden');
+        });
+        document.getElementById('players-modal-close').addEventListener('click', () => {
+            playersModal.classList.add('hidden');
+        });
+        document.getElementById('players-modal-ok-btn').addEventListener('click', () => {
+            playersModal.classList.add('hidden');
+        });
+        
+        // --- Game Log Modal ---
         const logModal = document.getElementById('game-log-modal');
         document.getElementById('show-logs-btn').addEventListener('click', () => {
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
-        });
-        
-        document.getElementById('in-game-end-btn').addEventListener('click', () => {
-            document.getElementById('confirm-end-game-modal').classList.remove('hidden');
         });
         document.getElementById('game-log-modal-close').addEventListener('click', () => {
             logModal.classList.add('hidden');
@@ -80,7 +89,11 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-log-modal-ok-btn').addEventListener('click', () => {
             logModal.classList.add('hidden');
         });
-
+        
+        // --- Other Modals ---
+        document.getElementById('in-game-end-btn').addEventListener('click', () => {
+            document.getElementById('confirm-end-game-modal').classList.remove('hidden');
+        });
         document.getElementById('scoreboard-modal-close').addEventListener('click', () => {
             document.getElementById('scoreboard-modal').classList.add('hidden');
         });
@@ -122,6 +135,11 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('requestNextRound');
             document.getElementById('round-over-modal').classList.add('hidden');
         });
+        // NEW: Round Over End Game Button
+        document.getElementById('round-over-end-game-btn').addEventListener('click', () => {
+            document.getElementById('round-over-modal').classList.add('hidden');
+            document.getElementById('confirm-end-game-modal').classList.remove('hidden');
+        });
     }
 
     function setupDynamicEventListeners() {
@@ -132,8 +150,8 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        
-        document.getElementById('other-players-table-body').addEventListener('click', (e) => {
+        // MODIFIED: Target new table body in modal
+        document.getElementById('players-modal-table-body').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
              if (afkBtn) {
                 const playerIdToMark = afkBtn.dataset.playerId;
@@ -282,13 +300,9 @@ window.addEventListener('DOMContentLoaded', () => {
         hideWinnerAnnouncement(); // Hide overlay immediately
         renderGameOver(logHistory); // Show final modal briefly
         
-        // The server will emit lobbyUpdate after this to switch screens
-        if (lobbyReturnInterval) clearInterval(lobbyReturnInterval);
-        lobbyReturnInterval = setInterval(() => {
-             document.getElementById('game-over-modal').classList.add('hidden');
-             isInitialGameRender = true; // Reset view state for lobby
-             clearInterval(lobbyReturnInterval);
-        }, 3000); // Short delay to see final modal
+        // REMOVED: Client-side lobby return timer. Server now controls this
+        // by emitting lobbyUpdate after the second 15s delay.
+        isInitialGameRender = true; // Reset view state for lobby
     });
     
     
@@ -375,9 +389,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (me && me.isHost) {
             document.getElementById('start-next-round-btn').style.display = 'block';
+            document.getElementById('round-over-end-game-btn').style.display = 'block'; // NEW
             document.getElementById('round-over-ok-btn').style.display = 'none';
         } else {
             document.getElementById('start-next-round-btn').style.display = 'none';
+            document.getElementById('round-over-end-game-btn').style.display = 'none'; // NEW
             document.getElementById('round-over-ok-btn').style.display = 'block';
         }
         document.getElementById('round-over-modal').classList.remove('hidden');
@@ -531,7 +547,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
-        const tableBody = document.getElementById('other-players-table-body');
+        // MODIFIED: Target new modal table body
+        const tableBody = document.getElementById('players-modal-table-body');
         const actionHeader = document.getElementById('host-action-col-header');
         tableBody.innerHTML = '';
 
@@ -586,7 +603,8 @@ window.addEventListener('DOMContentLoaded', () => {
             actionHeader.style.display = showActionColumn ? '' : 'none';
         }
         
-        document.querySelectorAll('#other-players-table .col-action').forEach(cell => {
+        // MODIFIED: Target new modal table
+        document.querySelectorAll('#players-modal .col-action').forEach(cell => {
             cell.style.display = showActionColumn ? '' : 'none';
         });
     }
@@ -715,6 +733,19 @@ window.addEventListener('DOMContentLoaded', () => {
             row.className = 'river-row';
 
             const [suitName, deckIndex] = suitKey.split('-');
+            
+            // --- NEW: Add Desktop Label ---
+            if (!isMobile) {
+                const labelEl = document.createElement('div');
+                labelEl.className = 'river-row-label';
+                if (numDecks == 2) {
+                    labelEl.textContent = `${suitName} (Deck ${parseInt(deckIndex) + 1})`;
+                } else {
+                    labelEl.textContent = suitName;
+                }
+                row.appendChild(labelEl);
+            }
+            // --- END NEW ---
 
             if (!layout) {
                  
