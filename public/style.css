@@ -310,8 +310,9 @@ body {
 }
 
 /* *** MODIFIED: Deck 2 Tint (Inset Shadow) *** */
+/* *** THIS IS THE FIX: Combined the default shadow with the inset shadow *** */
 .deck-1-tint {
-    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039);
+    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039), 0 2px 5px rgba(0,0,0,0.3);
 }
 
 /* *** NEW: Combo animation for playable strict Deck 2 card *** */
@@ -390,9 +391,9 @@ body {
     max-width: 95px; /* MODIFIED: Bigger cards */
     margin: 0 auto;
 }
-/* *** MODIFIED: River card tint uses inset shadow *** */
+/* *** MODIFIED: River card tint uses inset shadow AND default shadow *** */
 .river-card.deck-1-tint {
-    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039); /* Tint for river cards */
+    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039), 0 2px 5px rgba(0,0,0,0.3); /* Tint for river cards */
     box-sizing: border-box;
 }
 
@@ -568,7 +569,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 .final-hands-header {
     margin-top: 20px;
     margin-bottom: 10px;
-    color: var(--teak-dark);
+    color: var(--dark-text);
 }
 #round-over-hands .player-hand-display {
     margin-bottom: 10px;
