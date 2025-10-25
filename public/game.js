@@ -34,6 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
+    setupSwipeNavigation(); // NEW
 
     function setupJoinScreenListeners() {
         document.getElementById('join-game-btn').addEventListener('click', () => {
@@ -271,7 +272,7 @@ window.addEventListener('DOMContentLoaded', () => {
         renderOtherPlayers(gs.players, me, gs.currentPlayerId, gs.dealerId);
         renderGameStatusBanner(gs, me);
         renderRiver(gs.boardState, gs.settings.deckCount);
-        renderScoreboard(gs.players); 
+        renderScoreboard(gs.players); // BUG FIX: This will now run *after* server sends final update
 
         if (isInitialGameRender) {
             if (window.innerWidth <= 850) {
@@ -286,6 +287,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // *** MODIFIED: Show announcement BEFORE modal ***
     socket.on('roundOver', (data) => {
+        // Timer remains 5 seconds
         showWinnerAnnouncement(data.winnerName + " wins the Round!", null, 5000, () => {
             renderRoundOverModal(data); // Show modal AFTER announcement
         });
@@ -306,9 +308,8 @@ window.addEventListener('DOMContentLoaded', () => {
              winnerText = "Game Over!"; // Fallback
         }
         const subtext = "You will be taken to the lobby shortly...";
-        // Show announcement for 15 seconds, no callback needed
-        // The server will trigger 'gameEnded' after the delay
-        showWinnerAnnouncement(winnerText, subtext, 15000, null); 
+        // Show announcement for 12 seconds
+        showWinnerAnnouncement(winnerText, subtext, 12000, null); 
     });
     
     // *** MODIFIED: Hide winner announcement when gameEnded arrives ***
@@ -317,7 +318,7 @@ window.addEventListener('DOMContentLoaded', () => {
         renderGameOver(logHistory); // Show final modal briefly
         
         // REMOVED: Client-side lobby return timer. Server now controls this
-        // by emitting lobbyUpdate after the second 15s delay.
+        // by emitting lobbyUpdate after the second 12s delay.
         isInitialGameRender = true; // Reset view state for lobby
     });
     
@@ -389,6 +390,8 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
         
         // MODIFIED: Manually build scoreboard table here to apply correct styles
+        // This copies the HTML from the *hidden* scoreboard, which was updated by the
+        // final 'updateGameState' event.
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
         document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; 
         
@@ -825,7 +828,8 @@ window.addEventListener('DOMContentLoaded', () => {
                         if (rankStr) {
                             const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
                             
-                            if (r > lowRankVal && r < highRankVal) {
+                            // MODIFIED: Stack all cards after the first one
+                            if (r > lowRankVal) {
                                 cardEl.classList.add('bunched');
                             }
                             row.appendChild(cardEl);
@@ -1007,6 +1011,44 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         if (container) {
             container.innerHTML = ''; // Clear existing rain elements
+        }
+    }
+    
+    // --- NEW: Mobile Swipe Navigation ---
+    function setupSwipeNavigation() {
+        const container = document.getElementById('mobile-scroll-container');
+        if (!container) return;
+
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+
+        container.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+        }, { passive: true });
+
+        container.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipeGesture();
+        }, { passive: true });
+
+        function handleSwipeGesture() {
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = touchEndY - touchStartY;
+            
+            // Check if it's a significant horizontal swipe and not a vertical scroll
+            if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+                if (deltaX < 0) {
+                    // Swipe Left -> Show Table
+                    document.getElementById('show-table-btn').click();
+                } else {
+                    // Swipe Right -> Show Dashboard (My Hand)
+                    document.getElementById('show-dashboard-btn').click();
+                }
+            }
         }
     }
     

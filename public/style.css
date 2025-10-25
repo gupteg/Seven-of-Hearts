@@ -439,6 +439,15 @@ body {
     justify-content: flex-end;
     gap: 10px;
 }
+
+/* NEW: Style for lobby caption */
+#game-over-lobby-caption {
+    font-size: 1.2em;
+    font-style: italic;
+    color: var(--dark-text);
+    margin-top: 15px;
+    text-align: center;
+}
 /* --- END: Modals --- */
 
 
