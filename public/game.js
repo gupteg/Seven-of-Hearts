@@ -52,11 +52,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
-            const deckCount = document.querySelector('input[name="deck-count"]:checked').value;
+            // MODIFIED: Read deck-mode instead of deck-count
+            const deckMode = document.querySelector('input[name="deck-mode"]:checked').value;
 
             socket.emit('startGame', {
                 hostPassword,
-                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" }
+                settings: { deckMode: deckMode, winCondition: "first_out" } // Send deckMode
             });
         });
 
@@ -545,7 +546,8 @@ window.addEventListener('DOMContentLoaded', () => {
             return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
         });
 
-        const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
+        // Use deckMode from gameState for validation
+        const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gs.settings.deckMode);
         const validMoveIds = new Set(validMoves.map(card => card.id));
         const numDecks = gs.settings.deckCount;
 
@@ -566,7 +568,8 @@ window.addEventListener('DOMContentLoaded', () => {
         const fallbackBtn = document.getElementById('start-next-round-fallback-btn'); // NEW
 
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
-            const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
+            // Use deckMode for validation check
+            const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gs.settings.deckMode);
             const canPass = validMoves.length === 0;
 
             passBtn.style.display = 'block';
@@ -875,33 +878,66 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-
-    function getValidMoves(hand, boardState, isFirstMove) {
+    // *** MODIFIED: Accept and use deckMode ***
+    function getValidMoves(hand, boardState, isFirstMove, deckMode) {
         const validMoves = [];
         if (!hand) return [];
 
         if (isFirstMove) {
-
             const sevenOfHearts = hand.find(c => c.id === '7-Hearts-0');
             return sevenOfHearts ? [sevenOfHearts] : [];
         }
 
         for (const card of hand) {
             const deckIndex = card.id.split('-')[2];
-            const suitKey = `${card.suit}-${deckIndex}`;
-            const layout = boardState[suitKey];
             const cardRankVal = RANK_ORDER[card.rank];
+            const suit = card.suit;
 
             if (card.rank === '7') {
-                if (!layout) {
-                    validMoves.push(card);
+                if (deckMode === 'fungible') {
+                    // Valid if NEITHER river for this suit exists
+                    const suitKey0 = `${suit}-0`;
+                    const suitKey1 = `${suit}-1`;
+                    if (!boardState[suitKey0] && !boardState[suitKey1]) {
+                        validMoves.push(card);
+                    }
+                } else {
+                    // Original logic: valid if THIS river doesn't exist
+                    const suitKey = `${suit}-${deckIndex}`;
+                    if (!boardState[suitKey]) {
+                        validMoves.push(card);
+                    }
                 }
-                continue;
+                continue; // Skip the rest for '7's
             }
 
-            if (layout) {
-                if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) {
+            // Check non-'7' cards
+            if (deckMode === 'fungible') {
+                // Check against BOTH rivers for this suit
+                const suitKey0 = `${suit}-0`;
+                const suitKey1 = `${suit}-1`;
+                const layout0 = boardState[suitKey0];
+                const layout1 = boardState[suitKey1];
+                let canPlay = false;
+
+                if (layout0 && (cardRankVal === layout0.high + 1 || cardRankVal === layout0.low - 1)) {
+                    canPlay = true;
+                }
+                if (!canPlay && layout1 && (cardRankVal === layout1.high + 1 || cardRankVal === layout1.low - 1)) {
+                    canPlay = true;
+                }
+
+                if (canPlay) {
                     validMoves.push(card);
+                }
+            } else {
+                // Original logic: check only the specific river
+                const suitKey = `${suit}-${deckIndex}`;
+                const suitLayout = boardState[suitKey];
+                if (suitLayout) {
+                    if (cardRankVal === suitLayout.high + 1 || cardRankVal === suitLayout.low - 1) {
+                         validMoves.push(card);
+                    }
                 }
             }
         }

@@ -26,12 +26,18 @@
 
         <div id="host-lobby-actions" class="lobby-actions" style="display: none;">
             <div id="host-game-settings" class="game-settings">
+                <h4>Game Settings</h4>
                 <div class="setting-group">
-                    <label>Decks:</label>
-                    <input type="radio" id="deck-1" name="deck-count" value="1" checked>
-                    <label for="deck-1">1 Deck</label>
-                    <input type="radio" id="deck-2" name="deck-count" value="2">
-                    <label for="deck-2">2 Decks</label>
+                    <input type="radio" id="deck-single" name="deck-mode" value="single" checked>
+                    <label for="deck-single">1 Deck</label>
+                </div>
+                 <div class="setting-group">
+                    <input type="radio" id="deck-double" name="deck-mode" value="double">
+                    <label for="deck-double">2 Decks</label>
+                </div>
+                 <div class="setting-group">
+                    <input type="radio" id="deck-fungible" name="deck-mode" value="fungible">
+                    <label for="deck-fungible">2 Decks (Fungible)</label>
                 </div>
             </div>
             <div id="host-controls">
