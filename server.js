@@ -24,7 +24,7 @@ const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8'
 
 function addLog(message) {
     if (!gameState) return;
-    gameState.logHistory.unshift(message); 
+    gameState.logHistory.unshift(message);
     if (gameState.logHistory.length > 50) {
         gameState.logHistory.pop();
     }
@@ -54,17 +54,17 @@ function shuffleDeck(deck) {
 
 // --- Game Helper Functions ---
 function getNextPlayerId(currentPlayerId) {
-    
+
     const availablePlayers = gameState.players.filter(p => p.status === 'Active' || (p.isBot === true && p.hand.length > 0));
-    
-    if (availablePlayers.length === 0) return null; 
-    
+
+    if (availablePlayers.length === 0) return null;
+
     const currentIndex = availablePlayers.findIndex(p => p.playerId === currentPlayerId);
     if (currentIndex === -1) {
         // If current player is no longer available (e.g., bot finished hand), start from first available
         return availablePlayers[0].playerId;
     }
-    
+
     const nextIndex = (currentIndex + 1) % availablePlayers.length;
     return availablePlayers[nextIndex].playerId;
 }
@@ -109,7 +109,7 @@ function checkHandForValidMoves(hand, boardState, isFirstMove) {
 
 function initializeGame(readyPlayers, settings) {
     addLog('Initializing new game of Seven of Hearts...');
-    
+
     const gamePlayers = readyPlayers.map(p => ({
         playerId: p.playerId,
         name: p.name,
@@ -117,8 +117,8 @@ function initializeGame(readyPlayers, settings) {
         isHost: p.isHost,
         status: 'Active',
         hand: [],
-        score: 0, 
-        isBot: false, 
+        score: 0,
+        isBot: false,
     }));
 
     const host = gamePlayers.find(p => p.isHost);
@@ -127,20 +127,21 @@ function initializeGame(readyPlayers, settings) {
 
     gameState = {
         players: gamePlayers,
-        boardState: {}, 
-        currentPlayerId: null, 
+        boardState: {},
+        currentPlayerId: null,
         logHistory: ['Game initialized.'],
         settings: settings,
         isPaused: false,
         pausedForPlayerNames: [],
         pauseEndTime: null,
         isFirstMove: true,
-        currentRound: 0, 
+        currentRound: 0,
         dealerOrder: dealerOrder,
-        currentDealerIndex: -1, 
-        dealerId: null, 
+        currentDealerIndex: -1,
+        dealerId: null,
+        isBetweenRounds: false, // NEW FLAG
     };
-    
+
     io.emit('gameStarted');
     startNewRound();
 }
@@ -148,15 +149,15 @@ function initializeGame(readyPlayers, settings) {
 function startNewRound() {
     if (!gameState) return;
 
-    
+
     const activePlayerIds = new Set(gameState.players.filter(p => p.isBot !== true).map(p => p.playerId));
     gameState.players = gameState.players.filter(p => activePlayerIds.has(p.playerId));
     gameState.dealerOrder = gameState.dealerOrder.filter(playerId => activePlayerIds.has(playerId));
 
-    
+
     if (gameState.players.length < 2) {
         addLog('Not enough players to start a new round. Ending game.');
-        endSession(true); 
+        endSession(true);
         return;
     }
 
@@ -164,11 +165,12 @@ function startNewRound() {
     gameState.currentDealerIndex = (gameState.currentDealerIndex + 1) % gameState.dealerOrder.length;
     const dealerId = gameState.dealerOrder[gameState.currentDealerIndex];
     const dealer = gameState.players.find(p => p.playerId === dealerId);
-    
+
     gameState.boardState = {};
     gameState.isFirstMove = true;
-    gameState.logHistory = []; 
-    gameState.players.forEach(p => p.hand = []); 
+    gameState.logHistory = [];
+    gameState.players.forEach(p => p.hand = []);
+    gameState.isBetweenRounds = false; // NEW: Set flag to false
 
     let deck = createDeck(gameState.settings.deckCount);
     deck = shuffleDeck(deck);
@@ -188,7 +190,7 @@ function startNewRound() {
             break;
         }
     }
-    
+
     if (!firstPlayerId) {
         firstPlayerId = gameState.players[0].playerId;
         firstPlayerName = gameState.players[0].name;
@@ -199,16 +201,16 @@ function startNewRound() {
 
     addLog(`Round ${gameState.currentRound} starting. ${dealer.name} is the dealer.`);
     addLog(`Waiting for ${firstPlayerName} to play the 7 of Hearts.`);
-    
+
     io.emit('updateGameState', gameState);
-    checkAndRunNextBotTurn(); 
+    checkAndRunNextBotTurn();
 }
 
-// *** MODIFIED: Send finalHands ***
+// *** MODIFIED: Send finalHands and hostId, set isBetweenRounds flag ***
 function endRound(winner) {
     if (!gameState) return;
 
-    
+
     const winnerName = winner ? winner.name : "No one";
     addLog(`🎉 ${winnerName} has won Round ${gameState.currentRound}! 🎉`);
 
@@ -217,42 +219,52 @@ function endRound(winner) {
 
     gameState.players.forEach(p => {
         let roundScore = 0;
-        
+
         if (!winner || p.playerId !== winner.playerId) {
             for (const card of p.hand) {
                 roundScore += RANK_ORDER[card.rank];
             }
         }
-        
-        
+
+
         if (p.isBot !== true) {
-             p.score += roundScore; 
+             p.score += roundScore;
         }
-        
+
         scoreboard.push({
             name: p.name + (p.isBot ? ' [Bot]' : ''),
             roundScore: roundScore,
             cumulativeScore: p.score
         });
-        
+
         // Store a copy of the hand (important: bots might still have cards)
-        finalHands[p.playerId] = [...p.hand]; 
+        finalHands[p.playerId] = [...p.hand];
     });
 
     scoreboard.sort((a, b) => a.cumulativeScore - b.cumulativeScore); // Sort low score first for display consistency
+
+    gameState.isBetweenRounds = true; // NEW: Set flag to true
+
+    // NEW: Find current host to send ID
+    const currentHost = gameState.players.find(p => p.isHost && p.status !== 'Removed'); // Find active host
+    const hostId = currentHost ? currentHost.playerId : null;
 
     io.emit('roundOver', {
         scoreboard: scoreboard,
         winnerName: winnerName,
         roundNumber: gameState.currentRound,
-        finalHands: finalHands // NEW: Send hands
+        finalHands: finalHands,
+        hostId: hostId // NEW: Send hostId
     });
+
+    // Also send an updateGameState so fallback button appears immediately
+    io.emit('updateGameState', gameState);
 }
 
 // *** MODIFIED: Timers to 12s, added final updateGameState ***
 function endSession(wasGameAborted = false) {
     if (!gameState) {
-        hardReset(); 
+        hardReset();
         return;
     }
 
@@ -269,11 +281,11 @@ function endSession(wasGameAborted = false) {
             winners.push(p.name);
         }
     });
-    
+
     // --- NEW: BUG FIX ---
     // Send final state so client scoreboards are updated BEFORE modal is shown
-    io.emit('updateGameState', gameState); 
-    
+    io.emit('updateGameState', gameState);
+
     // --- Emit Announcement ---
     io.emit('gameOverAnnouncement', { winnerNames: winners });
     // --- END ---
@@ -288,18 +300,18 @@ function endSession(wasGameAborted = false) {
         // --- NEW: Nested 12s delay for lobby return ---
         setTimeout(() => {
             if (!gameState) return; // Check again
-            
+
             players = gameState.players
                 .filter(p => p.isBot !== true) // Filter out bots when returning to lobby
                 .map(p => ({
                     playerId: p.playerId,
-                    socketId: p.socketId, 
+                    socketId: p.socketId,
                     name: p.name,
                     isHost: p.isHost,
-                    isReady: p.isHost, 
+                    isReady: p.isHost,
                     active: p.status === 'Active' // Status might be 'Removed' if they were AFK bot
                 }));
-            
+
             // Update socketIds for active players
             players.forEach(p => {
                 if (p.active) {
@@ -313,10 +325,10 @@ function endSession(wasGameAborted = false) {
             gameState = null;
             Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
             if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
-            
+
         }, 12000); // 12 second delay *after* gameEnded is sent
         // --- END: Nested delay ---
-        
+
     }, 12000); // 12 second delay *before* gameEnded is sent
 }
 
@@ -324,9 +336,9 @@ function endSession(wasGameAborted = false) {
 function checkAndRunNextBotTurn() {
     if (!gameState) return;
     const nextPlayer = gameState.players.find(p => p.playerId === gameState.currentPlayerId);
-    
+
     if (nextPlayer && nextPlayer.isBot === true) {
-        
+
         setTimeout(() => runBotTurn(nextPlayer), 1500);
     }
 }
@@ -353,7 +365,7 @@ function runBotTurn(botPlayer) {
     if (cardToPlay) {
         const cardInHandIndex = botPlayer.hand.findIndex(c => c.id === cardToPlay.id);
         botPlayer.hand.splice(cardInHandIndex, 1);
-        
+
         const cardRankVal = RANK_ORDER[cardToPlay.rank];
         const deckIndex = cardToPlay.id.split('-')[2];
         const suitKey = `${cardToPlay.suit}-${deckIndex}`;
@@ -365,7 +377,7 @@ function runBotTurn(botPlayer) {
         } else {
             gameState.boardState[suitKey].low = cardRankVal;
         }
-        
+
         if (gameState.isFirstMove) {
             gameState.isFirstMove = false;
         }
@@ -380,22 +392,22 @@ function runBotTurn(botPlayer) {
         addLog(`[Bot] ${botPlayer.name} passed.`);
     }
 
-    
+
     gameState.currentPlayerId = getNextPlayerId(botPlayer.playerId);
 
     if (gameState.currentPlayerId === null) {
-        
+
         // Check if any *human* player won (rare case if bot plays last card and no humans left?)
         const humanWinner = gameState.players.find(p => p.status === 'Active' && p.isBot !== true && p.hand.length === 0);
         if (humanWinner) {
              endRound(humanWinner);
         } else {
             addLog('All players are out of cards or moves. Ending round.');
-            endRound(null); 
+            endRound(null);
         }
     } else {
         io.emit('updateGameState', gameState);
-        checkAndRunNextBotTurn(); 
+        checkAndRunNextBotTurn();
     }
 }
 
@@ -404,25 +416,25 @@ function runBotTurn(botPlayer) {
 function handlePlayerRemoval(playerId) {
     if (!gameState) return;
     const playerToRemove = gameState.players.find(p => p.playerId === playerId);
-    
+
     if (playerToRemove && playerToRemove.status !== 'Removed') {
-        
-        playerToRemove.status = 'Removed'; 
-        playerToRemove.isBot = true;      
+
+        playerToRemove.status = 'Removed';
+        playerToRemove.isBot = true;
         addLog(`[Bot] ${playerToRemove.name} disconnected and is now bot-controlled.`);
         delete reconnectTimers[playerId];
-        
-        
+
+
         const realActivePlayers = gameState.players.filter(p => p.status === 'Active' && p.isBot !== true);
         if (realActivePlayers.length < 1) { // Need at least 1 human to continue
             addLog('Not enough human players. Ending game.');
             endSession(true);
             return;
-        } 
-            
-        
+        }
+
+
         if (playerToRemove.isHost) {
-            const newHost = realActivePlayers[0]; 
+            const newHost = realActivePlayers[0];
             if (newHost) {
                 newHost.isHost = true;
                 addLog(`${newHost.name} is the new host.`);
@@ -432,8 +444,8 @@ function handlePlayerRemoval(playerId) {
                  return;
             }
         }
-        
-        
+
+
         const stillDisconnected = gameState.players.some(p => p.status === 'Disconnected');
         if (!stillDisconnected) {
             gameState.isPaused = false;
@@ -448,7 +460,7 @@ function handlePlayerRemoval(playerId) {
 
         io.emit('updateGameState', gameState);
 
-        
+
         if (gameState.currentPlayerId === playerId) {
             runBotTurn(playerToRemove);
         }
@@ -458,13 +470,13 @@ function handlePlayerRemoval(playerId) {
 
 function hardReset() {
     console.log("Hard reset triggered.");
-    
+
     const sockets = io.sockets.sockets;
     sockets.forEach((socket, socketId) => {
         // Check if this socket belongs to someone in the lobby or game
         const inLobby = players.some(p => p.socketId === socketId);
         const inGame = gameState?.players.some(p => p.socketId === socketId);
-        
+
         if(inLobby || inGame) {
              console.log(`Forcing disconnect for socket ${socketId}`);
              socket.emit('forceDisconnect');
@@ -472,10 +484,10 @@ function hardReset() {
         }
     });
 
-    
+
     gameState = null;
     players = [];
-    
+
     Object.keys(reconnectTimers).forEach(key => {
         clearTimeout(reconnectTimers[key]);
         delete reconnectTimers[key];
@@ -484,7 +496,7 @@ function hardReset() {
         clearTimeout(gameOverCleanupTimer);
         gameOverCleanupTimer = null;
     }
-    
+
     console.log("Server state wiped.");
 }
 // --- END: Core Game Logic ---
@@ -493,7 +505,7 @@ function hardReset() {
 // --- Lobby & Player Management Logic ---
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
-    
+
     socket.on('joinGame', ({ playerName, playerId }) => {
         if (gameState) {
             // --- Reconnection Logic ---
@@ -510,9 +522,9 @@ io.on('connection', (socket) => {
                 playerToRejoin.socketId = socket.id;
                 clearTimeout(reconnectTimers[playerToRejoin.playerId]);
                 delete reconnectTimers[playerToRejoin.playerId];
-                
+
                 addLog(`Player ${playerToRejoin.name} has reconnected!`);
-                
+
                 const stillDisconnected = gameState.players.filter(p => p.status === 'Disconnected');
                 if (stillDisconnected.length === 0) {
                     gameState.isPaused = false;
@@ -534,14 +546,14 @@ io.on('connection', (socket) => {
             // if (playerId) {
             //     existingPlayer = players.find(p => p.playerId === playerId);
             // }
-            
+
             // Check if name already exists
              let nameExists = players.some(p => p.name.toLowerCase() === playerName.toLowerCase());
              if (nameExists) {
                 socket.emit('joinFailed', `Name "${playerName}" is already taken.`);
                 return;
              }
-            
+
             // If existing player had same socket ID (rare, but possible on quick reconnect)
             existingPlayer = players.find(p => p.socketId === socket.id);
 
@@ -553,7 +565,7 @@ io.on('connection', (socket) => {
                     playerId: `${socket.id}-${Date.now()}`,
                     name: playerName,
                     socketId: socket.id,
-                    isHost: players.length === 0, 
+                    isHost: players.length === 0,
                     isReady: false,
                     active: true
                 };
@@ -561,7 +573,7 @@ io.on('connection', (socket) => {
                 players.push(newPlayer);
                 socket.emit('joinSuccess', newPlayer.playerId);
             }
-            
+
             io.emit('lobbyUpdate', players);
         }
     });
@@ -596,37 +608,37 @@ io.on('connection', (socket) => {
         }
 
         const readyPlayers = players.filter(p => p.isReady && p.active);
-        
-        if (readyPlayers.length < 3) { 
+
+        if (readyPlayers.length < 3) {
             socket.emit('warning', 'You need at least 3 ready players to start.');
             return;
         }
 
         initializeGame(readyPlayers, settings);
     });
-    
+
     // --- Seven of Hearts Game Events ---
     socket.on('playCard', (card) => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
-        
+
         // Prevent bots from sending this event (shouldn't happen)
-        if (player && player.isBot) return; 
-        
+        if (player && player.isBot) return;
+
         if (player && player.playerId === gameState.currentPlayerId) {
-            
+
             const cardInHandIndex = player.hand.findIndex(c => c.id === card.id);
             if (cardInHandIndex === -1) {
                 return socket.emit('warning', { title: 'Error', message: 'Card not in hand.' });
             }
-            
+
             const cardToPlay = player.hand[cardInHandIndex];
 
             const isValid = checkValidMove(cardToPlay, gameState.boardState, player.hand, gameState.isFirstMove);
 
             if (isValid) {
                 player.hand.splice(cardInHandIndex, 1);
-                
+
                 const cardRankVal = RANK_ORDER[cardToPlay.rank];
                 const deckIndex = cardToPlay.id.split('-')[2];
                 const suitKey = `${cardToPlay.suit}-${deckIndex}`;
@@ -638,7 +650,7 @@ io.on('connection', (socket) => {
                 } else {
                     gameState.boardState[suitKey].low = cardRankVal;
                 }
-                
+
                 if (gameState.isFirstMove) {
                     gameState.isFirstMove = false;
                 }
@@ -646,14 +658,14 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} played the ${cardToPlay.rank} of ${cardToPlay.suit}.`);
 
                 if (player.hand.length === 0) {
-                    endRound(player); 
+                    endRound(player);
                     return;
                 }
 
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); 
-                
+                checkAndRunNextBotTurn();
+
             } else {
                 socket.emit('warning', { title: 'Invalid Move', message: 'That is not a valid move.' });
             }
@@ -663,29 +675,29 @@ io.on('connection', (socket) => {
     socket.on('passTurn', () => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
-        
+
         if (player && player.isBot) return; // Bots don't send this
 
         if (player && player.playerId === gameState.currentPlayerId) {
-            
+
             const hasValidMove = checkHandForValidMoves(player.hand, gameState.boardState, gameState.isFirstMove);
-            
+
             if (hasValidMove) {
                 socket.emit('warning', { title: 'Invalid Pass', message: 'You cannot pass, you have a valid move.' });
             } else {
                 addLog(`${player.name} passed.`);
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn(); 
+                checkAndRunNextBotTurn();
             }
         }
     });
 
-    
+
     socket.on('requestNextRound', () => {
         if (!gameState) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
-        
+
         if (player && player.isHost) {
             addLog(`Host ${player.name} is starting the next round.`);
             startNewRound();
@@ -697,7 +709,7 @@ io.on('connection', (socket) => {
         if (!gameState) return;
         const requester = gameState.players.find(p => p.socketId === socket.id);
         const playerToMark = gameState.players.find(p => p.playerId === playerIdToMark);
-        
+
         // Don't mark bots as AFK
         if (requester && requester.isHost && playerToMark && playerToMark.status === 'Active' && !playerToMark.isBot) {
             playerToMark.status = 'Disconnected';
@@ -705,17 +717,17 @@ io.on('connection', (socket) => {
             gameState.isPaused = true;
             gameState.pausedForPlayerNames = gameState.players.filter(p => p.status === 'Disconnected').map(p => p.name);
             gameState.pauseEndTime = Date.now() + DISCONNECT_GRACE_PERIOD;
-            
+
             if (reconnectTimers[playerToMark.playerId]) clearTimeout(reconnectTimers[playerToMark.playerId]);
             reconnectTimers[playerToMark.playerId] = setTimeout(() => {
                 handlePlayerRemoval(playerToMark.playerId);
             }, DISCONNECT_GRACE_PERIOD);
-            
+
             io.emit('updateGameState', gameState);
-            
+
             const afkSocket = io.sockets.sockets.get(playerToMark.socketId);
             if (afkSocket) {
-                afkSocket.emit('youWereMarkedAFK'); 
+                afkSocket.emit('youWereMarkedAFK');
             }
         }
     });
@@ -727,9 +739,9 @@ io.on('connection', (socket) => {
             player.status = 'Active';
             clearTimeout(reconnectTimers[player.playerId]);
             delete reconnectTimers[player.playerId];
-            
+
             addLog(`Player ${player.name} is back!`);
-            
+
             const stillDisconnected = gameState.players.filter(p => p.status === 'Disconnected');
             if (stillDisconnected.length === 0) {
                 gameState.isPaused = false;
@@ -745,7 +757,7 @@ io.on('connection', (socket) => {
 
     socket.on('endSession', () => {
         let isHost = false;
-        
+
         if (gameState) {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) {
@@ -770,7 +782,7 @@ io.on('connection', (socket) => {
          if (gameState?.players) {
             const playerInGame = gameState.players.find(p => p.socketId === socket.id);
             if (playerInGame && playerInGame.isHost) isHost = true;
-         } 
+         }
          // Check in lobby if no game or not found in game
          if (!isHost && players) {
             const playerInLobby = players.find(p => p.socketId === socket.id);
@@ -792,7 +804,7 @@ io.on('connection', (socket) => {
                 gameState.isPaused = true;
                 gameState.pausedForPlayerNames = gameState.players.filter(p => p.status === 'Disconnected').map(p => p.name);
                 gameState.pauseEndTime = Date.now() + DISCONNECT_GRACE_PERIOD;
-                
+
                 if (reconnectTimers[playerInGame.playerId]) clearTimeout(reconnectTimers[playerInGame.playerId]);
                 reconnectTimers[playerInGame.playerId] = setTimeout(() => {
                     handlePlayerRemoval(playerInGame.playerId);
