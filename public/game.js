@@ -56,9 +56,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } 
             });
         });
-        document.getElementById('end-session-btn').addEventListener('click', () => {
-            document.getElementById('confirm-end-game-modal').classList.remove('hidden');
-        });
+        // "End Session" button listener removed (button deleted from HTML)
         document.getElementById('hard-reset-btn').addEventListener('click', () => {
             document.getElementById('confirm-hard-reset-modal').classList.remove('hidden');
         });
@@ -134,7 +132,8 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        document.getElementById('other-players-container').addEventListener('click', (e) => {
+        // *** MODIFIED: Listener now on table body ***
+        document.getElementById('other-players-table-body').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
              if (afkBtn) {
                 const playerIdToMark = afkBtn.dataset.playerId;
@@ -240,7 +239,6 @@ window.addEventListener('DOMContentLoaded', () => {
         renderScoreboard(gs.players); 
 
         if (isInitialGameRender) {
-            // Reset mobile view to dashboard
             if (window.innerWidth <= 850) {
                 document.getElementById('game-board').classList.remove('table-view');
                 document.getElementById('show-dashboard-btn').classList.add('active');
@@ -445,41 +443,65 @@ window.addEventListener('DOMContentLoaded', () => {
         endBtn.style.display = me.isHost ? 'block' : 'none';
     }
 
+    // *** MODIFIED: Rewritten to build a table ***
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
-        const container = document.getElementById('other-players-container');
-        container.innerHTML = '';
-        
+        const tableBody = document.getElementById('other-players-table-body');
+        const actionHeader = document.getElementById('host-action-col-header');
+        tableBody.innerHTML = '';
+
+        let showActionColumn = false;
+
         players.filter(p => p.playerId !== me.playerId).forEach(player => {
-            const tile = document.createElement('div');
-            tile.className = 'other-player-tile';
+            const row = document.createElement('tr');
+            
             if (player.playerId === currentPlayerId) {
-                tile.classList.add('active-player');
+                row.classList.add('active-player-row');
             }
 
+            // --- Player Cell ---
             let status = '';
             if (player.isBot) {
                 status = '<span class="other-player-status bot">[Bot]</span>';
             } else if (player.status === 'Disconnected') {
                 status = '<span class="other-player-status reconnecting">Offline</span>';
             }
-
-            let afkButton = '';
-            if (me.isHost && player.status === 'Active' && !player.isBot) {
-                afkButton = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
-            }
+            const dealerIcon = (player.playerId === dealerId) ? ' (D)' : ''; // Short for table
             
-            let dealerIcon = (player.playerId === dealerId) ? ' (Dealer)' : '';
+            const playerCell = document.createElement('td');
+            playerCell.innerHTML = `${player.name} ${player.isHost ? '👑' : ''} ${dealerIcon} ${status}`;
+            
+            // --- Cards Cell ---
+            const cardsCell = document.createElement('td');
+            cardsCell.className = 'col-cards';
+            cardsCell.textContent = player.hand ? player.hand.length : 0;
+            
+            // --- Score Cell ---
+            const scoreCell = document.createElement('td');
+            scoreCell.className = 'col-score';
+            scoreCell.textContent = player.score || 0;
 
-            tile.innerHTML = `
-                <div class="other-player-name">${player.name} ${player.isHost ? '👑' : ''} ${status}</div>
-                <div class="other-player-details">
-                    <div>Score: ${player.score || 0}</div>
-                    <div>Cards: ${player.hand ? player.hand.length : 0}</div>
-                    <div>${dealerIcon}</div>
-                </div>
-                ${afkButton}
-            `;
-            container.appendChild(tile);
+            // --- Action Cell (for Host) ---
+            const actionCell = document.createElement('td');
+            actionCell.className = 'col-action';
+            if (me.isHost && player.status === 'Active' && !player.isBot) {
+                actionCell.innerHTML = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
+                showActionColumn = true;
+            }
+
+            row.appendChild(playerCell);
+            row.appendChild(cardsCell);
+            row.appendChild(scoreCell);
+            row.appendChild(actionCell);
+            tableBody.appendChild(row);
+        });
+        
+        // Show/hide the action column header
+        if (actionHeader) {
+            actionHeader.style.display = showActionColumn ? '' : 'none';
+        }
+        // Hide all action cells if not needed
+        document.querySelectorAll('#other-players-table .col-action').forEach(cell => {
+            cell.style.display = showActionColumn ? '' : 'none';
         });
     }
 

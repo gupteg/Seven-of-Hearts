@@ -7,7 +7,7 @@
     --parchment-bg: #D2B48C;
     --dark-text: #4a2c2a;
     --busted-red: #c70039;
-    --sienna-border: #a0522d; /* Deck 2 border color */
+    --sienna-border: #a0522d; 
 }
 
 body {
@@ -154,40 +154,62 @@ body {
 .action-btn.danger-btn:hover:not(:disabled) { background-color: #e04462; }
 
 
-/* Wrappable Other Players Container */
-#other-players-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
+/* --- MODIFIED: Other Players Table --- */
+#other-players-table-container {
     flex-grow: 1;
     flex-shrink: 1;
-    overflow-y: auto;
-    min-height: 100px; 
-    align-content: flex-start;
+    overflow-y: auto; /* Makes the table scrollable */
+    min-height: 100px;
+    max-height: 250px; /* Max height for desktop */
     background: rgba(0,0,0,0.1);
     padding: 10px;
     border-radius: 8px;
 }
-.other-player-tile {
-    flex-grow: 1;
-    min-width: 150px;
-    background: var(--teak-light);
-    border: 3px solid var(--teak-dark);
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
-    position: relative;
-    height: 90px; 
-    box-sizing: border-box;
+#other-players-table {
+    width: 100%;
+    border-collapse: collapse;
 }
-.other-player-tile.active-player {
-    border-color: var(--gold-accent);
-    box-shadow: 0 0 15px var(--gold-accent);
+#other-players-table th, 
+#other-players-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--teak-light);
 }
-.other-player-name { font-weight: bold; font-size: 1.1em; }
-.other-player-details { font-size: 0.9em; opacity: 0.9; margin-top: 8px; }
-.other-player-tile .afk-btn { position: absolute; top: 5px; right: 5px; font-size: 0.8em; padding: 2px 4px; }
-.other-player-status { font-size: 0.8em; padding: 2px 5px; border-radius: 4px; background-color: var(--busted-red); color: white; display: inline-block; margin-left: 5px; }
+#other-players-table th {
+    color: var(--gold-accent);
+    font-size: 0.9em;
+    padding-top: 0;
+}
+#other-players-table td {
+    font-size: 0.95em;
+    vertical-align: middle;
+}
+#other-players-table .col-cards,
+#other-players-table .col-score {
+    text-align: center;
+    width: 50px;
+}
+#other-players-table .col-action {
+    width: 60px;
+    text-align: center;
+}
+#other-players-table .afk-btn {
+    font-size: 0.8em;
+    padding: 2px 4px;
+}
+#other-players-table tr.active-player-row td {
+    background-color: rgba(218, 165, 32, 0.1);
+    font-weight: bold;
+}
+.other-player-status { 
+    font-size: 0.8em; 
+    padding: 2px 5px; 
+    border-radius: 4px; 
+    color: white; 
+    display: inline-block; 
+    margin-left: 5px; 
+}
+.other-player-status.reconnecting { background-color: var(--busted-red); }
 .other-player-status.bot { background-color: #4a6a8c; } 
 /* --- END: Dashboard Styles --- */
 
@@ -217,7 +239,7 @@ body {
 
 /* --- MODIFIED: Deck 2 Tint (Border) --- */
 .deck-1-tint {
-    border: 3px solid var(--sienna-border);
+    border: 4px solid var(--busted-red, #c70039);
     box-sizing: border-box;
 }
 /* Ensure playable border overrides tint border */
@@ -273,7 +295,7 @@ body {
     margin: 0 auto; 
 }
 .river-card.deck-1-tint {
-    border: 3px solid var(--sienna-border); /* Tint for river cards */
+    border: 4px solid var(--busted-red, #c70039); /* Tint for river cards */
     box-sizing: border-box;
 }
 
@@ -449,30 +471,28 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     /* --- MODIFIED: Mobile Toggle Layout --- */
     #mobile-scroll-container {
         display: flex;
-        flex-direction: column; /* Stack columns vertically */
+        flex-direction: column; 
         flex-grow: 1;
         width: 100%;
-        overflow: hidden; /* No horizontal scroll */
+        overflow: hidden; 
     }
 
     .game-column {
-        flex: 1; /* Column takes up available space */
+        flex: 1; 
         width: 100%;
         max-height: none; 
-        min-height: 0; /* Allow column to shrink */
+        min-height: 0; 
         box-sizing: border-box;
         padding: 10px;
-        overflow-y: auto; /* Independent vertical scroll */
-        display: flex; /* Re-enable flex for column contents */
+        overflow-y: auto; 
+        display: flex; 
         flex-direction: column;
     }
     
-    /* Default state: Show Dashboard, Hide Table */
     #table-column {
         display: none;
     }
     
-    /* Toggled state: Hide Dashboard, Show Table */
     #game-board.table-view #dashboard-column {
         display: none;
     }
@@ -483,11 +503,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 
 
     #dashboard-column {
-        padding-bottom: 50px; /* Space for toggle bar */
+        padding-bottom: 50px; 
     }
     #table-column {
         border: none;
-        padding-bottom: 50px; /* Space for toggle bar */
+        padding-bottom: 50px; 
     }
 
     /* --- MODIFIED: Page Indicator Toggle Bar --- */
