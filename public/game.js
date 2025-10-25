@@ -8,6 +8,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let moveAnnouncementTimeout = null; // Timer for move announcement
     let rainInterval = null; // Timer for rain animation
 
+    // --- Seven of Hearts Constants ---
     const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
     const RANK_MAP = {
         'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -17,6 +18,10 @@ window.addEventListener('DOMContentLoaded', () => {
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
     const ALL_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
+    // *** THIS IS THE FIX: Added the missing SUITS constant ***
+    const SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
+    // --- END Constants ---
+
 
     let isInitialGameRender = true;
     let pauseCountdownInterval;
@@ -754,7 +759,7 @@ window.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        try { // Add error handling
+        try {
             if (gameMode === 'fungible') {
                 renderFungibleRiver(boardState, numDecks);
             } else {
@@ -771,12 +776,13 @@ window.addEventListener('DOMContentLoaded', () => {
         const isMobile = window.innerWidth <= 850;
         const isFungible = true;
 
-        for (const suitName of SUITS) {
+        // Use the globally defined SUITS array
+        SUITS.forEach(suitName => {
             const suitLayout = boardState[suitName]; // e.g., { row1: {low: 7, high: 8}, row2: {low: 7, high: 7} } or undefined
 
             // Create and append Row 1
             const row1Element = createRiverRow(suitLayout ? suitLayout.row1 : null, suitName, '0', numDecks, isFungible, isMobile);
-            if (row1Element) { // Add safety check
+            if (row1Element) {
                 riverContainer.appendChild(row1Element);
             } else {
                 console.error("Failed to create row 1 for", suitName);
@@ -784,12 +790,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
             // Create and append Row 2
             const row2Element = createRiverRow(suitLayout ? suitLayout.row2 : null, suitName, '1', numDecks, isFungible, isMobile);
-             if (row2Element) { // Add safety check
+             if (row2Element) {
                 riverContainer.appendChild(row2Element);
             } else {
                  console.error("Failed to create row 2 for", suitName);
             }
-        }
+        });
     }
 
     function renderStrictRiver(boardState, numDecks) {
@@ -812,7 +818,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const [suitName, deckIndex] = suitKey.split('-');
 
             const rowElement = createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile);
-            if (rowElement) { // Add safety check
+            if (rowElement) {
                  riverContainer.appendChild(rowElement);
             } else {
                  console.error("Failed to create strict row for", suitKey);
@@ -820,18 +826,18 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // *** MODIFIED: Refined Placeholder Logic ***
+    // *** MODIFIED: Cleaned up Placeholder Logic ***
     function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
-        try { // Add error handling within the function
+        try {
             const row = document.createElement('div');
             row.className = 'river-row';
 
-            // Add Desktop Label
+            // Add Desktop Label (No changes needed here)
             if (!isMobile) {
                 const labelEl = document.createElement('div');
                 labelEl.className = 'river-row-label';
                 if (numDecks == 2) {
-                    const deckLabel = parseInt(deckIndex) + 1; // Always show Deck 1 or Deck 2
+                    const deckLabel = parseInt(deckIndex) + 1;
                     labelEl.textContent = `${suitName} (Deck ${deckLabel})`;
                 } else {
                     labelEl.textContent = suitName;
@@ -842,13 +848,15 @@ window.addEventListener('DOMContentLoaded', () => {
             if (!layout) {
                 // --- RENDER PLACEHOLDERS ---
                 if (isMobile) {
+                    // Mobile: Single placeholder div with text
                     const placeholder = document.createElement('div');
                     placeholder.className = 'river-placeholder';
+                    // Label includes Deck number for clarity, even if empty
                     const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
                     placeholder.textContent = label;
                     row.appendChild(placeholder);
                 } else {
-                    // Desktop Grid Placeholders
+                    // Desktop: Grid of 13 placeholders (7 highlighted)
                     ALL_RANKS.forEach((rank, i) => {
                         if (i === 6) { // Position for the 7
                             row.appendChild(createRiverPlaceholder('7'));
@@ -858,32 +866,22 @@ window.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             } else {
-                // --- RENDER CARDS ---
+                // --- RENDER CARDS --- (No changes needed here)
                 const lowRankVal = layout.low;
                 const highRankVal = layout.high;
 
                 if (isMobile) {
-                    // Mobile Bunched Cards
-                    if (lowRankVal > 1) {
-                        const prevRank = ALL_RANKS[lowRankVal - 2];
-                        row.appendChild(createRiverPlaceholder(prevRank));
-                    }
+                    if (lowRankVal > 1) row.appendChild(createRiverPlaceholder(ALL_RANKS[lowRankVal - 2]));
                     for (let r = lowRankVal; r <= highRankVal; r++) {
                         const rankStr = ALL_RANKS[r - 1];
                         if (rankStr) {
                             const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible);
-                            if (r > lowRankVal) {
-                                cardEl.classList.add('bunched');
-                            }
+                            if (r > lowRankVal) cardEl.classList.add('bunched');
                             row.appendChild(cardEl);
                         }
                     }
-                    if (highRankVal < 13) {
-                        const nextRank = ALL_RANKS[highRankVal];
-                        row.appendChild(createRiverPlaceholder(nextRank));
-                    }
+                    if (highRankVal < 13) row.appendChild(createRiverPlaceholder(ALL_RANKS[highRankVal]));
                 } else {
-                    // Desktop Grid Cards
                     ALL_RANKS.forEach((rankStr, i) => {
                         const rankVal = i + 1;
                         if (rankVal >= lowRankVal && rankVal <= highRankVal) {
@@ -906,19 +904,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // *** Client-side logic for fungible move validation ***
     function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
+        if (!card || !boardState || !hand) return false; // Safety check
         if (isFirstMove) {
             return card.id === '7-Hearts-c1';
         }
-        
+
         const suitLayout = boardState[card.suit];
         const cardRankVal = RANK_ORDER[card.rank];
 
         if (card.rank === '7') {
-            if (!suitLayout) return true;
-            if (suitLayout.row1 && !suitLayout.row2) return true;
-            return false;
+            if (!suitLayout) return true; // Can play if suit layout doesn't exist
+            if (suitLayout.row1 && !suitLayout.row2) return true; // Can play if only row1 exists
+            return false; // Cannot play if both rows exist
         }
 
+        // Check non-7 cards against existing rows
         if (suitLayout) {
             if (suitLayout.row1) {
                 if (cardRankVal === suitLayout.row1.high + 1) return true;
@@ -929,11 +929,12 @@ window.addEventListener('DOMContentLoaded', () => {
                 if (cardRankVal === suitLayout.row2.low - 1) return true;
             }
         }
-        return false;
+        return false; // Not playable on any row
     }
 
     // *** Client-side logic for strict move validation ***
     function checkValidMoveStrict(card, boardState, hand, isFirstMove) {
+        if (!card || !boardState || !hand) return false; // Safety check
         if (isFirstMove) {
             return card.id === '7-Hearts-0';
         }
@@ -942,7 +943,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const suitKey = `${card.suit}-${deckIndex}`;
 
         if (card.rank === '7') {
-            return !boardState[suitKey];
+            return !boardState[suitKey]; // Can play 7 if its specific layout doesn't exist
         }
 
         const suitLayout = boardState[suitKey];
@@ -951,48 +952,31 @@ window.addEventListener('DOMContentLoaded', () => {
             if (cardRankVal === suitLayout.high + 1) return true;
             if (cardRankVal === suitLayout.low - 1) return true;
         }
-        return false;
+        return false; // Not playable on its specific layout
     }
 
     // *** This function now correctly calls the helpers ***
     function getValidMoves(hand, gs) {
-        if (!hand || !gs || !gs.settings) return []; // Added safety checks
-        
+        if (!hand || !gs || !gs.settings || !gs.boardState) return []; // More safety checks
+
         const boardState = gs.boardState;
         const isFirstMove = gs.isFirstMove;
-        
-        // Ensure settings exist before accessing gameMode
+
         if (!gs.settings.gameMode) {
              console.error("gameMode is missing from settings:", gs.settings);
              return [];
         }
 
-        if (gs.settings.gameMode === 'fungible') {
-            // --- Fungible Logic ---
-            if (isFirstMove) {
-                const startCard = hand.find(c => c.id === '7-Hearts-c1');
-                return startCard ? [startCard] : [];
-            }
-            
-            const validMoves = [];
-            for (const card of hand) {
-                // Pass only necessary parts of boardState if possible, or ensure it's valid
-                if (checkValidMoveFungible(card, boardState, hand, false)) {
-                    validMoves.push(card);
-                }
-            }
-            return validMoves;
+        const validMoves = [];
+        const checkFn = gs.settings.gameMode === 'fungible' ? checkValidMoveFungible : checkValidMoveStrict;
+        const startCardId = gs.settings.gameMode === 'fungible' ? '7-Hearts-c1' : '7-Hearts-0';
 
+        if (isFirstMove) {
+            const startCard = hand.find(c => c.id === startCardId);
+            return startCard ? [startCard] : [];
         } else {
-            // --- Strict (Original) Logic ---
-            if (isFirstMove) {
-                const startCard = hand.find(c => c.id === '7-Hearts-0');
-                return startCard ? [startCard] : [];
-            }
-
-            const validMoves = [];
             for (const card of hand) {
-                 if (checkValidMoveStrict(card, boardState, hand, false)) {
+                if (checkFn(card, boardState, hand, false)) {
                     validMoves.push(card);
                 }
             }
