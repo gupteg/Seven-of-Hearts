@@ -7,7 +7,7 @@ window.addEventListener('DOMContentLoaded', () => {
     let previousGameState = null; // For move announcement diff
     let moveAnnouncementTimeout = null; // Timer for move announcement
     let rainInterval = null; // Timer for rain animation
-    
+
     const SUIT_MAP = { 'Hearts': 'hearts', 'Diamonds': 'diamonds', 'Clubs': 'clubs', 'Spades': 'spades' };
     const RANK_MAP = {
         'A': 'ace', 'K': 'king', 'Q': 'queen', 'J': 'jack',
@@ -17,11 +17,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
     const ALL_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
-    
+
     let isInitialGameRender = true;
     let pauseCountdownInterval;
     let pauseCountdownIntervalMobile; // NEW: For second banner
-    
+
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
         myPersistentPlayerName = sessionStorage.getItem('sevenOfHeartsPlayerName');
@@ -29,7 +29,7 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('joinGame', { playerName: myPersistentPlayerName, playerId: myPersistentPlayerId });
         }
     });
-    
+
     setupJoinScreenListeners();
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
@@ -53,13 +53,13 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
             const deckCount = document.querySelector('input[name="deck-count"]:checked').value;
-            
-            socket.emit('startGame', { 
+
+            socket.emit('startGame', {
                 hostPassword,
-                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } 
+                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" }
             });
         });
-        
+
         document.getElementById('hard-reset-btn').addEventListener('click', () => {
             document.getElementById('confirm-hard-reset-modal').classList.remove('hidden');
         });
@@ -80,7 +80,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('players-modal-ok-btn').addEventListener('click', () => {
             playersModal.classList.add('hidden');
         });
-        
+
         // --- Game Log Modal ---
         const logModal = document.getElementById('game-log-modal');
         document.getElementById('show-logs-btn').addEventListener('click', () => {
@@ -97,7 +97,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-log-modal-ok-btn').addEventListener('click', () => {
             logModal.classList.add('hidden');
         });
-        
+
         // --- Other Modals ---
         document.getElementById('in-game-end-btn').addEventListener('click', () => {
             document.getElementById('confirm-end-game-modal').classList.remove('hidden');
@@ -127,7 +127,7 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('warning-modal').classList.add('hidden');
         });
         // REMOVED: Game Over "Return to Lobby" button listener
-        
+
         // --- Pass Button Listeners ---
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
@@ -145,6 +145,11 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('requestNextRound');
             document.getElementById('round-over-modal').classList.add('hidden');
         });
+        // --- NEW: Fallback Start Next Round Listener ---
+        document.getElementById('start-next-round-fallback-btn').addEventListener('click', () => {
+            socket.emit('requestNextRound');
+            // No need to hide modal here
+        });
         document.getElementById('round-over-end-game-btn').addEventListener('click', () => {
             document.getElementById('round-over-modal').classList.add('hidden');
             document.getElementById('confirm-end-game-modal').classList.remove('hidden');
@@ -158,7 +163,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 socket.emit('kickPlayer', playerIdToKick);
             }
         });
-        
+
         // MODIFIED: Target new table body in modal
         document.getElementById('players-modal-table-body').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
@@ -167,7 +172,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 socket.emit('markPlayerAFK', playerIdToMark);
             }
         });
-        
+
         document.getElementById('my-hand-container').addEventListener('click', (e) => {
             const cardEl = e.target.closest('.card-img');
             if (cardEl && cardEl.classList.contains('playable-card')) {
@@ -178,7 +183,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
         // --- Mobile Toggle Button Logic ---
         const dashboardBtn = document.getElementById('show-dashboard-btn');
         const tableBtn = document.getElementById('show-table-btn');
@@ -190,7 +195,7 @@ window.addEventListener('DOMContentLoaded', () => {
                 dashboardBtn.classList.add('active');
                 tableBtn.classList.remove('active');
             });
-            
+
             tableBtn.addEventListener('click', () => {
                 gameBoard.classList.add('table-view');
                 dashboardBtn.classList.remove('active');
@@ -215,7 +220,7 @@ window.addEventListener('DOMContentLoaded', () => {
         myPersistentPlayerName = null;
         showWarning('Join Failed', message);
     });
-    
+
     socket.on('kicked', () => {
         sessionStorage.removeItem('sevenOfHeartsPlayerId');
         sessionStorage.removeItem('sevenOfHeartsPlayerName');
@@ -234,10 +239,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-board').style.display = 'none';
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'block';
-        
+
         // Hide game-over modal in case it's lingering
         document.getElementById('game-over-modal').classList.add('hidden');
-        
+
         renderLobby(players);
     });
 
@@ -245,24 +250,24 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-board').style.display = 'flex';
     });
-    
+
     socket.on('updateGameState', (gs) => {
-        
+
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
         console.log('Received GameState:', gs);
-        
+
         // *** NEW: Handle Move Announcement ***
         handleMoveAnnouncement(gs, previousGameState);
         previousGameState = JSON.parse(JSON.stringify(gs)); // Deep clone for next comparison
 
         window.gameState = gs;
-        
+
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'none';
         document.getElementById('game-board').style.display = 'flex';
-        
+
         const me = gs.players.find(p => p.playerId === myPersistentPlayerId);
         if (!me) return;
 
@@ -284,7 +289,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    
+
     // *** MODIFIED: Show announcement BEFORE modal ***
     socket.on('roundOver', (data) => {
         // Timer remains 5 seconds
@@ -298,7 +303,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // BUG FIX: Force close round-end modals
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
-    
+
         let winnerText = "";
         if (winnerNames.length === 1) {
             winnerText = winnerNames[0] + " wins the Game!";
@@ -309,20 +314,20 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         const subtext = "You will be taken to the lobby shortly...";
         // Show announcement for 12 seconds
-        showWinnerAnnouncement(winnerText, subtext, 12000, null); 
+        showWinnerAnnouncement(winnerText, subtext, 12000, null);
     });
-    
+
     // *** MODIFIED: Hide winner announcement when gameEnded arrives ***
     socket.on('gameEnded', ({ logHistory }) => {
         hideWinnerAnnouncement(); // Hide overlay immediately
         renderGameOver(logHistory); // Show final modal briefly
-        
+
         // REMOVED: Client-side lobby return timer. Server now controls this
         // by emitting lobbyUpdate after the second 12s delay.
         isInitialGameRender = true; // Reset view state for lobby
     });
-    
-    
+
+
     socket.on('youWereMarkedAFK', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
     });
@@ -338,13 +343,13 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderLobby(players) {
         const playerList = document.getElementById('player-list');
         const me = players.find(p => p.playerId === myPersistentPlayerId);
-        
-        if (!me) { 
+
+        if (!me) {
             document.getElementById('join-screen').style.display = 'block';
             document.getElementById('lobby-screen').style.display = 'none';
             sessionStorage.removeItem('sevenOfHeartsPlayerId');
             myPersistentPlayerId = null;
-            return; 
+            return;
         }
 
         playerList.innerHTML = '';
@@ -355,7 +360,7 @@ window.addEventListener('DOMContentLoaded', () => {
             } else if (!p.active) { status = '<span class="player-status-badge reconnecting">(Offline)</span>';
             } else if (p.isReady) { status = '<span style="color: green;">✅ Ready</span>';
             } else { status = '<span style="color: #b00;">❌ Not Ready</span>'; }
-            
+
             li.innerHTML = `<span>${p.name} ${status}</span> ${(me && me.isHost && p.playerId !== me.playerId) ? `<button class="kick-btn danger-btn" data-player-id="${p.playerId}">Kick</button>` : ''}`;
             playerList.appendChild(li);
         });
@@ -384,49 +389,50 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('warning-modal-text').textContent = text;
         document.getElementById('warning-modal').classList.remove('hidden');
     }
-    
+
     function renderGameOver(logHistory) {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
-        
+
         // MODIFIED: Manually build scoreboard table here to apply correct styles
         // This copies the HTML from the *hidden* scoreboard, which was updated by the
         // final 'updateGameState' event.
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
-        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; 
-        
+        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent;
+
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
-    // *** MODIFIED: Render final hands ***
+    // *** MODIFIED: Use hostId from data for button visibility ***
     function renderRoundOverModal(data) {
-        const { scoreboard, winnerName, roundNumber, finalHands } = data;
+        const { scoreboard, winnerName, roundNumber, finalHands, hostId } = data; // Destructure hostId
         const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
 
         document.getElementById('round-over-title').textContent = `Round ${roundNumber} Complete!`;
         document.getElementById('round-over-winner-text').textContent = `🎉 ${winnerName} won the round! 🎉`;
-        
-        renderRoundScoreboardTable(scoreboard);
-        renderFinalHands(finalHands, scoreboard); // New function call
 
-        if (me && me.isHost) {
+        renderRoundScoreboardTable(scoreboard);
+        renderFinalHands(finalHands, scoreboard);
+
+        // Check against hostId from the event data
+        if (me && hostId === me.playerId) {
             document.getElementById('start-next-round-btn').style.display = 'block';
-            document.getElementById('round-over-end-game-btn').style.display = 'block'; // NEW
+            document.getElementById('round-over-end-game-btn').style.display = 'block';
             document.getElementById('round-over-ok-btn').style.display = 'none';
         } else {
             document.getElementById('start-next-round-btn').style.display = 'none';
-            document.getElementById('round-over-end-game-btn').style.display = 'none'; // NEW
+            document.getElementById('round-over-end-game-btn').style.display = 'none';
             document.getElementById('round-over-ok-btn').style.display = 'block';
         }
         document.getElementById('round-over-modal').classList.remove('hidden');
     }
 
-    
+
     function renderRoundScoreboardTable(scoreboardData) {
         const container = document.getElementById('round-over-scoreboard');
         let table = '<table>';
         table += '<tr><th>Player</th><th class="score-col">Round Score</th><th class="score-col">Total Score</th></tr>';
-        
+
         scoreboardData.forEach(player => {
             table += `<tr>
                 <td>${player.name}</td>
@@ -434,11 +440,11 @@ window.addEventListener('DOMContentLoaded', () => {
                 <td class="score-col">${player.cumulativeScore}</td>
             </tr>`;
         });
-        
+
         table += '</table>';
         container.innerHTML = table;
     }
-    
+
     // *** NEW: Render Final Hands in Modal ***
     function renderFinalHands(finalHands, scoreboardData) {
         const container = document.getElementById('round-over-hands');
@@ -456,7 +462,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const hand = finalHands[player.playerId];
             const handDiv = document.createElement('div');
             handDiv.className = 'player-hand-display';
-            
+
             const nameEl = document.createElement('div');
             nameEl.className = 'player-hand-name';
             nameEl.textContent = scoreEntry.name + ':'; // Use name from scoreboard (includes [Bot])
@@ -488,7 +494,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const rank = RANK_MAP[card.rank];
         img.src = `/assets/cards/${suit}_${rank}.svg`;
         img.alt = `${card.rank} of ${card.suit}`;
-        
+
         const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && deckIndex === '1') {
             img.classList.add('deck-1-tint'); // Apply tint border
@@ -497,25 +503,25 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderScoreboard(players) {
-        
+
         const scoreboard = document.getElementById('scoreboard-content');
         if (!players || players.length === 0) {
              scoreboard.innerHTML = '<p>No players in game.</p>';
              return;
         }
-        
+
         let table = '<table>';
         table += '<tr><th>Player</th><th class="score-col">Total Score</th></tr>';
-        
-        const sortedPlayers = [...players].sort((a, b) => (a.score || 0) - (b.score || 0)); 
-        
+
+        const sortedPlayers = [...players].sort((a, b) => (a.score || 0) - (b.score || 0));
+
         sortedPlayers.forEach(player => {
             table += `<tr>
                 <td>${player.name} ${player.isHost ? '👑' : ''} ${player.isBot ? '[Bot]' : ''}</td>
                 <td class="score-col">${player.score || 0}</td>
             </tr>`;
         });
-        
+
         table += '</table>';
         scoreboard.innerHTML = table;
     }
@@ -529,7 +535,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderMyHand(me, gs) {
         const handContainer = document.getElementById('my-hand-container');
         handContainer.innerHTML = '';
-        
+
         if (!me || !me.hand) return;
 
         const sortedHand = me.hand.sort((a, b) => {
@@ -538,13 +544,13 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
         });
-        
+
         const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
         const validMoveIds = new Set(validMoves.map(card => card.id));
-        const numDecks = gs.settings.deckCount; 
+        const numDecks = gs.settings.deckCount;
 
         sortedHand.forEach(card => {
-            const cardEl = createCardImageElement(card, numDecks); 
+            const cardEl = createCardImageElement(card, numDecks);
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
             }
@@ -552,30 +558,36 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // *** MODIFIED: Control fallback button visibility ***
     function renderMyActions(me, gs) {
         const passBtn = document.getElementById('pass-btn');
-        const passBtnMobile = document.getElementById('pass-btn-mobile'); // NEW
+        const passBtnMobile = document.getElementById('pass-btn-mobile');
         const endBtn = document.getElementById('in-game-end-btn');
+        const fallbackBtn = document.getElementById('start-next-round-fallback-btn'); // NEW
 
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
             const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
             const canPass = validMoves.length === 0;
-            
+
             passBtn.style.display = 'block';
             passBtn.disabled = !canPass;
-            
-            passBtnMobile.style.display = 'block'; // NEW
-            passBtnMobile.disabled = !canPass; // NEW
-            
+
+            passBtnMobile.style.display = 'block';
+            passBtnMobile.disabled = !canPass;
+
         } else {
             passBtn.style.display = 'none';
-            passBtnMobile.style.display = 'none'; // NEW
+            passBtnMobile.style.display = 'none';
         }
-        
+
+        // Show "End Game" if host
         endBtn.style.display = me.isHost ? 'block' : 'none';
+
+        // Show "Start Next Round" fallback if host AND between rounds
+        fallbackBtn.style.display = (me.isHost && gs.isBetweenRounds) ? 'block' : 'none'; // NEW
     }
 
-    
+
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
         // MODIFIED: Target new modal table body
         const tableBody = document.getElementById('players-modal-table-body');
@@ -586,34 +598,34 @@ window.addEventListener('DOMContentLoaded', () => {
 
         players.filter(p => p.playerId !== me.playerId).forEach(player => {
             const row = document.createElement('tr');
-            
+
             if (player.playerId === currentPlayerId) {
                 row.classList.add('active-player-row');
             }
 
-            
+
             let status = '';
             if (player.isBot) {
                 status = '<span class="other-player-status bot">[Bot]</span>';
             } else if (player.status === 'Disconnected') {
                 status = '<span class="other-player-status reconnecting">Offline</span>';
             }
-            const dealerIcon = (player.playerId === dealerId) ? ' (D)' : ''; 
-            
+            const dealerIcon = (player.playerId === dealerId) ? ' (D)' : '';
+
             const playerCell = document.createElement('td');
             playerCell.innerHTML = `${player.name} ${player.isHost ? '👑' : ''} ${dealerIcon} ${status}`;
-            
-            
+
+
             const cardsCell = document.createElement('td');
             cardsCell.className = 'col-cards';
             cardsCell.textContent = player.hand ? player.hand.length : 0;
-            
-            
+
+
             const scoreCell = document.createElement('td');
             scoreCell.className = 'col-score';
             scoreCell.textContent = player.score || 0;
 
-            
+
             const actionCell = document.createElement('td');
             actionCell.className = 'col-action';
             if (me.isHost && player.status === 'Active' && !player.isBot) {
@@ -627,12 +639,12 @@ window.addEventListener('DOMContentLoaded', () => {
             row.appendChild(actionCell);
             tableBody.appendChild(row);
         });
-        
-        
+
+
         if (actionHeader) {
             actionHeader.style.display = showActionColumn ? '' : 'none';
         }
-        
+
         // MODIFIED: Target new modal table
         document.querySelectorAll('#players-modal .col-action').forEach(cell => {
             cell.style.display = showActionColumn ? '' : 'none';
@@ -642,7 +654,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderGameStatusBanner(gs, me) {
         const banner = document.getElementById('game-status-banner');
         const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
-        
+
         if (gs.isPaused) {
             updatePauseBanner(gs);
             return;
@@ -660,7 +672,7 @@ window.addEventListener('DOMContentLoaded', () => {
         // Use stored previous log for move banner, current log for status banner
         const latestLog = gs.logHistory[0] || "Game Started.";
         const roundText = `(Round ${gs.currentRound || 1})`;
-        
+
         let bannerText = "";
         if (currentPlayer.playerId === me.playerId) {
             bannerText = `YOUR TURN. ${roundText} (${latestLog})`;
@@ -668,22 +680,22 @@ window.addEventListener('DOMContentLoaded', () => {
             const name = currentPlayer.isBot ? `[Bot] ${currentPlayer.name}` : currentPlayer.name;
             bannerText = `Waiting for ${name}... ${roundText} (${latestLog})`;
         }
-        
+
         banner.textContent = bannerText;
         bannerMobile.textContent = bannerText; // NEW
     }
-    
+
     function updatePauseBanner(gs) {
         const banner = document.getElementById('game-status-banner');
         const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
-        
+
         if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
         if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile); // NEW
-        
+
         const updateBanners = () => {
             const remaining = Math.max(0, Math.round((gs.pauseEndTime - Date.now()) / 1000));
             const bannerText = `⏳ Game Paused. Waiting for ${gs.pausedForPlayerNames.join(', ')}... (${remaining}s) ⏳`;
-            
+
             banner.innerHTML = bannerText;
             bannerMobile.innerHTML = bannerText; // NEW
 
@@ -696,7 +708,7 @@ window.addEventListener('DOMContentLoaded', () => {
         pauseCountdownInterval = setInterval(updateBanners, 1000);
         pauseCountdownIntervalMobile = setInterval(updateBanners, 1000); // NEW
     }
-    
+
     function renderLogModal(logHistory) {
         const content = document.getElementById('game-log-modal-content');
         if (!logHistory || logHistory.length === 0) {
@@ -706,7 +718,7 @@ window.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
-    
+
     function createCardImageElement(card, numDecks) {
         const img = document.createElement('img');
         img.className = 'card-img';
@@ -717,17 +729,17 @@ window.addEventListener('DOMContentLoaded', () => {
         img.dataset.id = card.id;
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
-        
-        
+
+
         const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
-        
+
         return img;
     }
 
-    
+
     function createRiverCardImageElement(suit, rank, deckIndex, numDecks) {
         const img = document.createElement('img');
         img.className = 'river-card';
@@ -735,12 +747,12 @@ window.addEventListener('DOMContentLoaded', () => {
         const rankName = RANK_MAP[rank];
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
-        
-        
+
+
         if (numDecks == 2 && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
-        
+
         return img;
     }
 
@@ -751,18 +763,18 @@ window.addEventListener('DOMContentLoaded', () => {
         return el;
     }
 
-    
+
     function createEmptyPlaceholder() {
         const el = document.createElement('div');
         el.className = 'river-empty-placeholder';
         return el;
     }
-    
-    
+
+
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
-        
+
         let suitsToRender = [];
         if (numDecks == 2) {
             suitsToRender = [
@@ -781,7 +793,7 @@ window.addEventListener('DOMContentLoaded', () => {
             row.className = 'river-row';
 
             const [suitName, deckIndex] = suitKey.split('-');
-            
+
             // --- NEW: Add Desktop Label ---
             if (!isMobile) {
                 const labelEl = document.createElement('div');
@@ -796,14 +808,14 @@ window.addEventListener('DOMContentLoaded', () => {
             // --- END NEW ---
 
             if (!layout) {
-                 
+
                  if (isMobile) {
                     const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
                     row.innerHTML = `<div class="river-placeholder">${label}</div>`;
                  } else {
-                    
+
                     ALL_RANKS.forEach((rank, i) => {
-                        if (i === 6) { 
+                        if (i === 6) {
                             row.appendChild(createRiverPlaceholder('7'));
                         } else {
                             row.appendChild(createEmptyPlaceholder());
@@ -811,23 +823,23 @@ window.addEventListener('DOMContentLoaded', () => {
                     });
                  }
             } else {
-                
+
                 const lowRankVal = layout.low;
                 const highRankVal = layout.high;
 
                 if (isMobile) {
-                    
+
                     if (lowRankVal > 1) {
                         const prevRank = ALL_RANKS[lowRankVal - 2];
                         row.appendChild(createRiverPlaceholder(prevRank));
                     }
 
-                    
+
                     for (let r = lowRankVal; r <= highRankVal; r++) {
                         const rankStr = ALL_RANKS[r-1];
                         if (rankStr) {
                             const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
-                            
+
                             // MODIFIED: Stack all cards after the first one
                             if (r > lowRankVal) {
                                 cardEl.classList.add('bunched');
@@ -836,23 +848,23 @@ window.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    
+
                     if (highRankVal < 13) {
                         const nextRank = ALL_RANKS[highRankVal];
                         row.appendChild(createRiverPlaceholder(nextRank));
                     }
                 } else {
-                    
+
                     ALL_RANKS.forEach((rankStr, i) => {
                         const rankVal = i + 1;
                         if (rankVal >= lowRankVal && rankVal <= highRankVal) {
-                            
+
                             row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks));
                         } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
-                            
+
                             row.appendChild(createRiverPlaceholder(rankStr));
                         } else {
-                            
+
                             row.appendChild(createEmptyPlaceholder());
                         }
                     });
@@ -863,13 +875,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    
+
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
         if (!hand) return [];
-        
+
         if (isFirstMove) {
-            
+
             const sevenOfHearts = hand.find(c => c.id === '7-Hearts-0');
             return sevenOfHearts ? [sevenOfHearts] : [];
         }
@@ -881,12 +893,12 @@ window.addEventListener('DOMContentLoaded', () => {
             const cardRankVal = RANK_ORDER[card.rank];
 
             if (card.rank === '7') {
-                if (!layout) { 
+                if (!layout) {
                     validMoves.push(card);
                 }
                 continue;
             }
-            
+
             if (layout) {
                 if (cardRankVal === layout.low - 1 || cardRankVal === layout.high + 1) {
                     validMoves.push(card);
@@ -895,13 +907,13 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         return validMoves;
     }
-    
+
     // *** NEW: Move Announcement Logic ***
     function handleMoveAnnouncement(currentState, prevState) {
         if (!prevState || !currentState || !currentState.logHistory || currentState.logHistory.length === 0) {
             return; // No previous state or no logs
         }
-        
+
         const latestLog = currentState.logHistory[0];
         const previousLog = prevState.logHistory[0];
 
@@ -931,7 +943,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         showMoveAnnouncement(message);
     }
-    
+
     function showMoveAnnouncement(message) {
         const banner = document.getElementById('move-announcement-banner');
         if (!banner) return;
@@ -950,13 +962,13 @@ window.addEventListener('DOMContentLoaded', () => {
             moveAnnouncementTimeout = null;
         }, 3000); // Display for 3 seconds
     }
-    
+
     // *** NEW: Winner Announcement Logic ***
     function showWinnerAnnouncement(mainText, subText, duration, callback) {
         const overlay = document.getElementById('winner-announcement-overlay');
         const textElement = document.getElementById('winner-announcement-text');
         const subtextElement = document.getElementById('winner-announcement-subtext');
-        
+
         if (!overlay || !textElement || !subtextElement) return;
 
         textElement.textContent = mainText;
@@ -971,13 +983,13 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }, duration);
     }
-    
+
     function hideWinnerAnnouncement() {
          const overlay = document.getElementById('winner-announcement-overlay');
          if (overlay) overlay.classList.add('hidden');
          stopRainAnimation();
     }
-    
+
     // *** NEW: Rain Animation ***
     function startRainAnimation() {
         const container = document.getElementById('winner-animation-container');
@@ -1013,7 +1025,7 @@ window.addEventListener('DOMContentLoaded', () => {
             container.innerHTML = ''; // Clear existing rain elements
         }
     }
-    
+
     // --- NEW: Mobile Swipe Navigation ---
     function setupSwipeNavigation() {
         const container = document.getElementById('mobile-scroll-container');
@@ -1038,7 +1050,7 @@ window.addEventListener('DOMContentLoaded', () => {
         function handleSwipeGesture() {
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
-            
+
             // Check if it's a significant horizontal swipe and not a vertical scroll
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
                 if (deltaX < 0) {
@@ -1051,7 +1063,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-    
+
     function makeDraggable(modal) {
         const modalContent = modal.querySelector('.modal-content');
         const header = modal.querySelector('.modal-header');

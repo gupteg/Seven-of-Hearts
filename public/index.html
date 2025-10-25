@@ -19,11 +19,11 @@
         <h2>Game Lobby</h2>
         <h3>Players:</h3>
         <ul id="player-list"></ul>
-        
+
         <div id="player-lobby-actions" class="lobby-actions">
             <button id="ready-btn">Ready</button>
         </div>
-        
+
         <div id="host-lobby-actions" class="lobby-actions" style="display: none;">
             <div id="host-game-settings" class="game-settings">
                 <div class="setting-group">
@@ -45,13 +45,13 @@
     </div>
 
     <div id="game-board" style="display: none;">
-        
+
         <div id="move-announcement-banner" class="hidden"></div>
 
         <div id="mobile-scroll-container">
 
             <div id="dashboard-column" class="game-column">
-                
+
                 <div id="my-info-panel" class="info-panel">
                     <h3 id="my-name">Player Name</h3>
                     <div class="my-score-box">
@@ -65,7 +65,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div id="dashboard-status-banner"></div>
 
                 <div class="panel-header"><h4>My Hand</h4></div>
@@ -76,20 +76,20 @@
                     <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
                     <button id="show-players-btn" class="action-btn secondary-btn">Show Players</button>
                     <button id="show-logs-btn" class="action-btn secondary-btn">Show Logs</button>
-                    <button id="in-game-end-btn" class="action-btn danger-btn" style="display: none;">End Game</button>
+                    <button id="start-next-round-fallback-btn" class="action-btn confirm-btn" style="display: none;">Start Next Round</button> <button id="in-game-end-btn" class="action-btn danger-btn" style="display: none;">End Game</button>
                 </div>
 
                 </div> <div id="table-column" class="game-column">
-                
+
                 <div id="game-status-banner">
                     Waiting for game to start...
                 </div>
-                
+
                 <div id="river-container">
                     </div>
 
-            </div> </div> 
-            
+            </div> </div>
+
             <div id="page-indicator">
                 <button id="show-dashboard-btn" class="page-toggle-btn active">My Hand</button>
                 <button id="show-table-btn" class="page-toggle-btn">Table</button>
@@ -162,7 +162,7 @@
                 </div>
         </div>
     </div>
-    
+
     <div id="game-over-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -188,7 +188,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="afk-notification-modal" class="modal hidden">
          <div class="modal-content">
             <div class="modal-header">
@@ -200,7 +200,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="confirm-hard-reset-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -253,7 +253,7 @@
             <p>Please wait for the host to start the next round.</p>
         </div>
     </div>
-    
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="game.js"></script>
 </body>
