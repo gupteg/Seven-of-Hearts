@@ -50,10 +50,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
             const deckCount = document.querySelector('input[name="deck-count"]:checked').value;
-            // Win condition removed
+            
             socket.emit('startGame', { 
                 hostPassword,
-                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } // Send dummy winCondition
+                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } 
             });
         });
         document.getElementById('end-session-btn').addEventListener('click', () => {
@@ -70,7 +70,7 @@ window.addEventListener('DOMContentLoaded', () => {
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
         });
-        // In-Game "End Game" button
+        
         document.getElementById('in-game-end-btn').addEventListener('click', () => {
             document.getElementById('confirm-end-game-modal').classList.remove('hidden');
         });
@@ -115,7 +115,7 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('passTurn');
         });
 
-        // *** NEW: Round Over Modal Listeners ***
+        
         document.getElementById('round-over-ok-btn').addEventListener('click', () => {
             document.getElementById('round-over-modal').classList.add('hidden');
             document.getElementById('waiting-for-host-modal').classList.remove('hidden');
@@ -214,7 +214,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     
     socket.on('updateGameState', (gs) => {
-        // *** NEW: Hide round-over and waiting modals on new round start ***
+        
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
@@ -234,7 +234,7 @@ window.addEventListener('DOMContentLoaded', () => {
         renderOtherPlayers(gs.players, me, gs.currentPlayerId, gs.dealerId);
         renderGameStatusBanner(gs, me);
         renderRiver(gs.boardState, gs.settings.deckCount);
-        renderScoreboard(gs.players); // Keep scoreboard modal up-to-date
+        renderScoreboard(gs.players); 
 
         if (isInitialGameRender) {
             const mobileScroll = document.getElementById('mobile-scroll-container');
@@ -245,7 +245,7 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // *** NEW: Round Over listener ***
+    
     socket.on('roundOver', (data) => {
         renderRoundOverModal(data);
     });
@@ -327,11 +327,11 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
-        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; // Show final scoreboard
+        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; 
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
-    // *** NEW: Render Round Over Modal ***
+    
     function renderRoundOverModal(data) {
         const { scoreboard, winnerName, roundNumber } = data;
         const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
@@ -351,7 +351,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('round-over-modal').classList.remove('hidden');
     }
 
-    // *** NEW: Helper to build scoreboard table ***
+    
     function renderRoundScoreboardTable(scoreboardData) {
         const container = document.getElementById('round-over-scoreboard');
         let table = '<table>';
@@ -370,7 +370,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderScoreboard(players) {
-        // This renders the "Scoreboard" modal content, which is separate from the round-over modal
+        
         const scoreboard = document.getElementById('scoreboard-content');
         if (!players || players.length === 0) {
              scoreboard.innerHTML = '<p>No players in game.</p>';
@@ -380,11 +380,11 @@ window.addEventListener('DOMContentLoaded', () => {
         let table = '<table>';
         table += '<tr><th>Player</th><th class="score-col">Total Score</th></tr>';
         
-        const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+        const sortedPlayers = [...players].sort((a, b) => (a.score || 0) - (b.score || 0)); // Sort low to high
         
         sortedPlayers.forEach(player => {
             table += `<tr>
-                <td>${player.name} ${player.isHost ? '👑' : ''}</td>
+                <td>${player.name} ${player.isHost ? '👑' : ''} ${player.isBot ? '[Bot]' : ''}</td>
                 <td class="score-col">${player.score || 0}</td>
             </tr>`;
         });
@@ -413,10 +413,10 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
         const validMoveIds = new Set(validMoves.map(card => card.id));
-        const numDecks = gs.settings.deckCount; // Get numDecks
+        const numDecks = gs.settings.deckCount; 
 
         sortedHand.forEach(card => {
-            const cardEl = createCardImageElement(card, numDecks); // Pass numDecks
+            const cardEl = createCardImageElement(card, numDecks); 
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
             }
@@ -436,8 +436,8 @@ window.addEventListener('DOMContentLoaded', () => {
             passBtn.style.display = 'none';
         }
 
-        // Show "End Game" button for host if game is active
-        endBtn.style.display = (me.isHost && !gs.isPaused) ? 'block' : 'none';
+        // *** BUG FIX: Show "End Game" button for host always ***
+        endBtn.style.display = me.isHost ? 'block' : 'none';
     }
 
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
@@ -452,12 +452,14 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             let status = '';
-            if (player.status === 'Disconnected') {
+            if (player.isBot) {
+                status = '<span class="other-player-status bot">[Bot]</span>';
+            } else if (player.status === 'Disconnected') {
                 status = '<span class="other-player-status reconnecting">Offline</span>';
             }
 
             let afkButton = '';
-            if (me.isHost && player.status === 'Active') {
+            if (me.isHost && player.status === 'Active' && !player.isBot) {
                 afkButton = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
             }
             
@@ -495,13 +497,14 @@ window.addEventListener('DOMContentLoaded', () => {
         
         if (currentPlayer.playerId === me.playerId) {
             banner.textContent = `YOUR TURN. ${roundText} (${latestLog})`;
-            if (gs.isFirstMove && !me.hand.find(c => c.id === '7-Hearts-0')) { // Must be 7 of hearts from first deck
+            if (gs.isFirstMove && !me.hand.find(c => c.id === '7-Hearts-0')) { 
                  showWarning("Your Turn", "You do not have the 7 of Hearts. You must pass.");
             } else if (gs.isFirstMove) {
                  showWarning("Your Turn", "You must play the 7 of Hearts to begin.");
             }
         } else {
-            banner.textContent = `Waiting for ${currentPlayer.name}... ${roundText} (${latestLog})`;
+            const name = currentPlayer.isBot ? `[Bot] ${currentPlayer.name}` : currentPlayer.name;
+            banner.textContent = `Waiting for ${name}... ${roundText} (${latestLog})`;
         }
     }
     
@@ -527,7 +530,7 @@ window.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
-    // --- MODIFIED: Added numDecks param for tinting ---
+    
     function createCardImageElement(card, numDecks) {
         const img = document.createElement('img');
         img.className = 'card-img';
@@ -539,7 +542,7 @@ window.addEventListener('DOMContentLoaded', () => {
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
         
-        // --- NEW: Add tint class if it's deck 2 ---
+        
         const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && deckIndex === '1') {
             img.classList.add('deck-1-tint');
@@ -548,7 +551,7 @@ window.addEventListener('DOMContentLoaded', () => {
         return img;
     }
 
-    // --- MODIFIED: Added deckIndex and numDecks params for tinting ---
+    
     function createRiverCardImageElement(suit, rank, deckIndex, numDecks) {
         const img = document.createElement('img');
         img.className = 'river-card';
@@ -557,7 +560,7 @@ window.addEventListener('DOMContentLoaded', () => {
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
         
-        // --- NEW: Add tint class if it's deck 2 ---
+        
         if (numDecks == 2 && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
@@ -572,14 +575,14 @@ window.addEventListener('DOMContentLoaded', () => {
         return el;
     }
 
-    // --- NEW: Helper for empty grid slots on desktop ---
+    
     function createEmptyPlaceholder() {
         const el = document.createElement('div');
         el.className = 'river-empty-placeholder';
         return el;
     }
     
-    // --- REWRITTEN: New River Logic for Desktop Grid & Mobile Bunching ---
+    
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
@@ -604,14 +607,14 @@ window.addEventListener('DOMContentLoaded', () => {
             const [suitName, deckIndex] = suitKey.split('-');
 
             if (!layout) {
-                 // Suit not started.
+                 
                  if (isMobile) {
                     const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
                     row.innerHTML = `<div class="river-placeholder">${label}</div>`;
                  } else {
-                    // Desktop: Show full grid with 7 placeholder
+                    
                     ALL_RANKS.forEach((rank, i) => {
-                        if (i === 6) { // 6 is index for rank '7'
+                        if (i === 6) { 
                             row.appendChild(createRiverPlaceholder('7'));
                         } else {
                             row.appendChild(createEmptyPlaceholder());
@@ -619,25 +622,23 @@ window.addEventListener('DOMContentLoaded', () => {
                     });
                  }
             } else {
-                // Suit has started
+                
                 const lowRankVal = layout.low;
                 const highRankVal = layout.high;
 
                 if (isMobile) {
-                    // --- MOBILE PATH: Bunching Logic ---
                     
-                    // 1. Add low placeholder
                     if (lowRankVal > 1) {
                         const prevRank = ALL_RANKS[lowRankVal - 2];
                         row.appendChild(createRiverPlaceholder(prevRank));
                     }
 
-                    // 2. Add all played cards
+                    
                     for (let r = lowRankVal; r <= highRankVal; r++) {
                         const rankStr = ALL_RANKS[r-1];
                         if (rankStr) {
                             const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
-                            // Add 'bunched' class if it's a middle card
+                            
                             if (r > lowRankVal && r < highRankVal) {
                                 cardEl.classList.add('bunched');
                             }
@@ -645,23 +646,23 @@ window.addEventListener('DOMContentLoaded', () => {
                         }
                     }
 
-                    // 3. Add high placeholder
+                    
                     if (highRankVal < 13) {
                         const nextRank = ALL_RANKS[highRankVal];
                         row.appendChild(createRiverPlaceholder(nextRank));
                     }
                 } else {
-                    // --- DESKTOP PATH: 13-Column Grid Logic ---
+                    
                     ALL_RANKS.forEach((rankStr, i) => {
                         const rankVal = i + 1;
                         if (rankVal >= lowRankVal && rankVal <= highRankVal) {
-                            // Played card
+                            
                             row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks));
                         } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
-                            // Playable placeholder
+                            
                             row.appendChild(createRiverPlaceholder(rankStr));
                         } else {
-                            // Empty slot
+                            
                             row.appendChild(createEmptyPlaceholder());
                         }
                     });
@@ -672,13 +673,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // --- BUG FIX: Corrected Client-Side Validation for 2-deck ---
+    
     function getValidMoves(hand, boardState, isFirstMove) {
         const validMoves = [];
         if (!hand) return [];
         
         if (isFirstMove) {
-            // First move must be 7 of Hearts from deck 0
+            
             const sevenOfHearts = hand.find(c => c.id === '7-Hearts-0');
             return sevenOfHearts ? [sevenOfHearts] : [];
         }
@@ -690,7 +691,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const cardRankVal = RANK_ORDER[card.rank];
 
             if (card.rank === '7') {
-                if (!layout) { // If layout for this *specific deck* doesn't exist
+                if (!layout) { 
                     validMoves.push(card);
                 }
                 continue;
