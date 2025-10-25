@@ -249,7 +249,7 @@ function endRound(winner) {
     });
 }
 
-// *** MODIFIED: Emit gameOverAnnouncement before delay, and add nested 15s delay ***
+// *** MODIFIED: Timers to 12s, added final updateGameState ***
 function endSession(wasGameAborted = false) {
     if (!gameState) {
         hardReset(); 
@@ -258,7 +258,7 @@ function endSession(wasGameAborted = false) {
 
     addLog('The game session is ending...');
 
-    // --- NEW: Calculate Winner & Emit Announcement ---
+    // --- Calculate Winner ---
     let minScore = Infinity;
     let winners = [];
     gameState.players.filter(p => p.isBot !== true).forEach(p => { // Only consider human players for winning
@@ -270,8 +270,13 @@ function endSession(wasGameAborted = false) {
         }
     });
     
+    // --- NEW: BUG FIX ---
+    // Send final state so client scoreboards are updated BEFORE modal is shown
+    io.emit('updateGameState', gameState); 
+    
+    // --- Emit Announcement ---
     io.emit('gameOverAnnouncement', { winnerNames: winners });
-    // --- END NEW ---
+    // --- END ---
 
     // Delay the actual session end and lobby return
     setTimeout(() => {
@@ -280,7 +285,7 @@ function endSession(wasGameAborted = false) {
         addLog('The game session has ended.');
         io.emit('gameEnded', { logHistory: gameState.logHistory });
 
-        // --- NEW: Nested 15s delay for lobby return ---
+        // --- NEW: Nested 12s delay for lobby return ---
         setTimeout(() => {
             if (!gameState) return; // Check again
             
@@ -309,10 +314,10 @@ function endSession(wasGameAborted = false) {
             Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
             if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
             
-        }, 15000); // 15 second delay *after* gameEnded is sent
+        }, 12000); // 12 second delay *after* gameEnded is sent
         // --- END: Nested delay ---
         
-    }, 15000); // 15 second delay *before* gameEnded is sent
+    }, 12000); // 12 second delay *before* gameEnded is sent
 }
 
 
@@ -755,7 +760,7 @@ io.on('connection', (socket) => {
         }
 
         if (isHost) {
-            endSession(false); // Triggers announcement + 15s delay
+            endSession(false); // Triggers announcement + 12s delay
         }
     });
 
