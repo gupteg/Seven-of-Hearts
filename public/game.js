@@ -20,7 +20,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let isInitialGameRender = true;
     let pauseCountdownInterval;
-    let pauseCountdownIntervalMobile; // NEW: For second banner
+    let pauseCountdownIntervalMobile;
 
     socket.on('connect', () => {
         myPersistentPlayerId = sessionStorage.getItem('sevenOfHeartsPlayerId');
@@ -34,7 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setupLobbyEventListeners();
     setupModalAndButtonListeners();
     setupDynamicEventListeners();
-    setupSwipeNavigation(); // NEW
+    setupSwipeNavigation();
 
     function setupJoinScreenListeners() {
         document.getElementById('join-game-btn').addEventListener('click', () => {
@@ -52,12 +52,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
-            // MODIFIED: Read deck-mode instead of deck-count
-            const deckMode = document.querySelector('input[name="deck-mode"]:checked').value;
+            // *** MODIFIED: Read the 'deck-count' value which is now '1', '2', or 'fungible' ***
+            const deckCountSetting = document.querySelector('input[name="deck-count"]:checked').value;
 
             socket.emit('startGame', {
                 hostPassword,
-                settings: { deckMode: deckMode, winCondition: "first_out" } // Send deckMode
+                settings: { deckCount: deckCountSetting, winCondition: "first_out" }
             });
         });
 
@@ -72,7 +72,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('show-players-btn').addEventListener('click', () => {
             playersModal.classList.remove('hidden');
         });
-        document.getElementById('show-players-btn-mobile').addEventListener('click', () => { // NEW
+        document.getElementById('show-players-btn-mobile').addEventListener('click', () => {
             playersModal.classList.remove('hidden');
         });
         document.getElementById('players-modal-close').addEventListener('click', () => {
@@ -88,7 +88,7 @@ window.addEventListener('DOMContentLoaded', () => {
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
         });
-         document.getElementById('show-logs-btn-mobile').addEventListener('click', () => { // NEW
+         document.getElementById('show-logs-btn-mobile').addEventListener('click', () => {
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
         });
@@ -107,7 +107,7 @@ window.addEventListener('DOMContentLoaded', () => {
             document.getElementById('scoreboard-modal').classList.add('hidden');
         });
         document.getElementById('confirm-end-yes-btn').addEventListener('click', () => {
-            socket.emit('endSession'); // Server now handles delay
+            socket.emit('endSession');
             document.getElementById('confirm-end-game-modal').classList.add('hidden');
         });
         document.getElementById('confirm-end-no-btn').addEventListener('click', () => {
@@ -127,13 +127,12 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('warning-modal-ok-btn').addEventListener('click', () => {
             document.getElementById('warning-modal').classList.add('hidden');
         });
-        // REMOVED: Game Over "Return to Lobby" button listener
 
         // --- Pass Button Listeners ---
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
         });
-        document.getElementById('pass-btn-mobile').addEventListener('click', () => { // NEW
+        document.getElementById('pass-btn-mobile').addEventListener('click', () => {
             socket.emit('passTurn');
         });
 
@@ -146,10 +145,8 @@ window.addEventListener('DOMContentLoaded', () => {
             socket.emit('requestNextRound');
             document.getElementById('round-over-modal').classList.add('hidden');
         });
-        // --- NEW: Fallback Start Next Round Listener ---
         document.getElementById('start-next-round-fallback-btn').addEventListener('click', () => {
             socket.emit('requestNextRound');
-            // No need to hide modal here
         });
         document.getElementById('round-over-end-game-btn').addEventListener('click', () => {
             document.getElementById('round-over-modal').classList.add('hidden');
@@ -165,7 +162,6 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // MODIFIED: Target new table body in modal
         document.getElementById('players-modal-table-body').addEventListener('click', (e) => {
              const afkBtn = e.target.closest('.afk-btn');
              if (afkBtn) {
@@ -241,7 +237,6 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('join-screen').style.display = 'none';
         document.getElementById('lobby-screen').style.display = 'block';
 
-        // Hide game-over modal in case it's lingering
         document.getElementById('game-over-modal').classList.add('hidden');
 
         renderLobby(players);
@@ -257,12 +252,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
-        // console.log('Received GameState:', gs); // KEEP ORIGINAL LOG
-        console.log('CLIENT: Received updateGameState:', JSON.stringify(gs.boardState)); // DETAILED BOARD STATE LOG
+        console.log('Received GameState:', gs);
 
-        // *** NEW: Handle Move Announcement ***
         handleMoveAnnouncement(gs, previousGameState);
-        previousGameState = JSON.parse(JSON.stringify(gs)); // Deep clone for next comparison
+        previousGameState = JSON.parse(JSON.stringify(gs));
 
         window.gameState = gs;
 
@@ -278,8 +271,9 @@ window.addEventListener('DOMContentLoaded', () => {
         renderMyActions(me, gs);
         renderOtherPlayers(gs.players, me, gs.currentPlayerId, gs.dealerId);
         renderGameStatusBanner(gs, me);
-        renderRiver(gs.boardState, gs.settings.deckCount);
-        renderScoreboard(gs.players); // BUG FIX: This will now run *after* server sends final update
+        // *** MODIFIED: Call the main renderRiver function ***
+        renderRiver(gs.boardState, gs.settings);
+        renderScoreboard(gs.players);
 
         if (isInitialGameRender) {
             if (window.innerWidth <= 850) {
@@ -292,17 +286,13 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
 
-    // *** MODIFIED: Show announcement BEFORE modal ***
     socket.on('roundOver', (data) => {
-        // Timer remains 5 seconds
         showWinnerAnnouncement(data.winnerName + " wins the Round!", null, 5000, () => {
-            renderRoundOverModal(data); // Show modal AFTER announcement
+            renderRoundOverModal(data);
         });
     });
 
-    // *** MODIFIED: Listener for Game Over announcement, now clears modals ***
     socket.on('gameOverAnnouncement', ({ winnerNames }) => {
-        // BUG FIX: Force close round-end modals
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
@@ -312,21 +302,16 @@ window.addEventListener('DOMContentLoaded', () => {
         } else if (winnerNames.length > 1) {
             winnerText = "Joint Winners: " + winnerNames.join(', ') + "!";
         } else {
-             winnerText = "Game Over!"; // Fallback
+             winnerText = "Game Over!";
         }
         const subtext = "You will be taken to the lobby shortly...";
-        // Show announcement for 12 seconds
         showWinnerAnnouncement(winnerText, subtext, 12000, null);
     });
 
-    // *** MODIFIED: Hide winner announcement when gameEnded arrives ***
     socket.on('gameEnded', ({ logHistory }) => {
-        hideWinnerAnnouncement(); // Hide overlay immediately
-        renderGameOver(logHistory); // Show final modal briefly
-
-        // REMOVED: Client-side lobby return timer. Server now controls this
-        // by emitting lobbyUpdate after the second 12s delay.
-        isInitialGameRender = true; // Reset view state for lobby
+        hideWinnerAnnouncement();
+        renderGameOver(logHistory);
+        isInitialGameRender = true;
     });
 
 
@@ -396,18 +381,14 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
 
-        // MODIFIED: Manually build scoreboard table here to apply correct styles
-        // This copies the HTML from the *hidden* scoreboard, which was updated by the
-        // final 'updateGameState' event.
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
         document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent;
 
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
-    // *** MODIFIED: Use hostId from data for button visibility ***
     function renderRoundOverModal(data) {
-        const { scoreboard, winnerName, roundNumber, finalHands, hostId } = data; // Destructure hostId
+        const { scoreboard, winnerName, roundNumber, finalHands, hostId } = data;
         const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
 
         document.getElementById('round-over-title').textContent = `Round ${roundNumber} Complete!`;
@@ -416,7 +397,6 @@ window.addEventListener('DOMContentLoaded', () => {
         renderRoundScoreboardTable(scoreboard);
         renderFinalHands(finalHands, scoreboard);
 
-        // Check against hostId from the event data
         if (me && hostId === me.playerId) {
             document.getElementById('start-next-round-btn').style.display = 'block';
             document.getElementById('round-over-end-game-btn').style.display = 'block';
@@ -447,17 +427,16 @@ window.addEventListener('DOMContentLoaded', () => {
         container.innerHTML = table;
     }
 
-    // *** NEW: Render Final Hands in Modal ***
     function renderFinalHands(finalHands, scoreboardData) {
         const container = document.getElementById('round-over-hands');
         container.innerHTML = '';
+        // *** MODIFIED: Get settings from gameState ***
         const numDecks = window.gameState?.settings?.deckCount || 1;
+        const isFungible = window.gameState?.settings?.gameMode === 'fungible';
 
         if (!finalHands || !scoreboardData) return;
 
-        // Display in scoreboard order
         scoreboardData.forEach(scoreEntry => {
-            // Find player ID from name (slightly inefficient but necessary)
             const player = window.gameState.players.find(p => p.name === scoreEntry.name.replace(' [Bot]',''));
             if (!player) return;
 
@@ -467,19 +446,19 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const nameEl = document.createElement('div');
             nameEl.className = 'player-hand-name';
-            nameEl.textContent = scoreEntry.name + ':'; // Use name from scoreboard (includes [Bot])
+            nameEl.textContent = scoreEntry.name + ':';
             handDiv.appendChild(nameEl);
 
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'player-hand-cards';
             if (hand && hand.length > 0) {
-                 // Sort hand for display
                  const sortedHand = hand.sort((a, b) => {
                     if (SUITS_ORDER[a.suit] !== SUITS_ORDER[b.suit]) return SUITS_ORDER[a.suit] - SUITS_ORDER[b.suit];
                     return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
                 });
                 sortedHand.forEach(card => {
-                    cardsContainer.appendChild(createSmallCardImage(card, numDecks));
+                    // *** MODIFIED: Pass isFungible flag ***
+                    cardsContainer.appendChild(createSmallCardImage(card, numDecks, isFungible));
                 });
             } else {
                 cardsContainer.textContent = '(Empty)';
@@ -488,18 +467,20 @@ window.addEventListener('DOMContentLoaded', () => {
             container.appendChild(handDiv);
         });
     }
-    // *** NEW: Helper for small card images ***
-    function createSmallCardImage(card, numDecks) {
+
+    // *** MODIFIED: Accept isFungible flag to control tint ***
+    function createSmallCardImage(card, numDecks, isFungible) {
          const img = document.createElement('img');
-        img.className = 'final-card-img'; // Use new class for smaller size
+        img.className = 'final-card-img';
         const suit = SUIT_MAP[card.suit];
         const rank = RANK_MAP[card.rank];
         img.src = `/assets/cards/${suit}_${rank}.svg`;
         img.alt = `${card.rank} of ${card.suit}`;
 
-        const deckIndex = card.id.split('-')[2];
-        if (numDecks == 2 && deckIndex === '1') {
-            img.classList.add('deck-1-tint'); // Apply tint border
+        const deckIndex = card.id.split('-')[2]; // '0', '1', 'c1', 'c2'
+        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+        if (numDecks == 2 && !isFungible && deckIndex === '1') {
+            img.classList.add('deck-1-tint');
         }
         return img;
     }
@@ -531,7 +512,7 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderMyInfo(me) {
         document.getElementById('my-name').textContent = `${me.name} (You) ${me.isHost ? '👑' : ''}`;
         document.getElementById('my-score').textContent = me.score || 0;
-        document.getElementById('my-card-count').textContent = me.hand ? me.hand.length : 0; // NEW
+        document.getElementById('my-card-count').textContent = me.hand ? me.hand.length : 0;
     }
 
     function renderMyHand(me, gs) {
@@ -547,13 +528,15 @@ window.addEventListener('DOMContentLoaded', () => {
             return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
         });
 
-        // Use deckMode from gameState for validation
-        const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gs.settings.deckMode);
+        // *** MODIFIED: Pass gs to getValidMoves ***
+        const validMoves = getValidMoves(me.hand, gs);
         const validMoveIds = new Set(validMoves.map(card => card.id));
         const numDecks = gs.settings.deckCount;
+        const isFungible = gs.settings.gameMode === 'fungible';
 
         sortedHand.forEach(card => {
-            const cardEl = createCardImageElement(card, numDecks);
+            // *** MODIFIED: Pass isFungible flag ***
+            const cardEl = createCardImageElement(card, numDecks, isFungible);
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
             }
@@ -561,16 +544,15 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // *** MODIFIED: Control fallback button visibility ***
     function renderMyActions(me, gs) {
         const passBtn = document.getElementById('pass-btn');
         const passBtnMobile = document.getElementById('pass-btn-mobile');
         const endBtn = document.getElementById('in-game-end-btn');
-        const fallbackBtn = document.getElementById('start-next-round-fallback-btn'); // NEW
+        const fallbackBtn = document.getElementById('start-next-round-fallback-btn');
 
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
-            // Use deckMode for validation check
-            const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove, gs.settings.deckMode);
+            // *** MODIFIED: Pass gs to getValidMoves ***
+            const validMoves = getValidMoves(me.hand, gs);
             const canPass = validMoves.length === 0;
 
             passBtn.style.display = 'block';
@@ -584,16 +566,12 @@ window.addEventListener('DOMContentLoaded', () => {
             passBtnMobile.style.display = 'none';
         }
 
-        // Show "End Game" if host
         endBtn.style.display = me.isHost ? 'block' : 'none';
-
-        // Show "Start Next Round" fallback if host AND between rounds
-        fallbackBtn.style.display = (me.isHost && gs.isBetweenRounds) ? 'block' : 'none'; // NEW
+        fallbackBtn.style.display = (me.isHost && gs.isBetweenRounds) ? 'block' : 'none';
     }
 
 
     function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
-        // MODIFIED: Target new modal table body
         const tableBody = document.getElementById('players-modal-table-body');
         const actionHeader = document.getElementById('host-action-col-header');
         tableBody.innerHTML = '';
@@ -649,7 +627,6 @@ window.addEventListener('DOMContentLoaded', () => {
             actionHeader.style.display = showActionColumn ? '' : 'none';
         }
 
-        // MODIFIED: Target new modal table
         document.querySelectorAll('#players-modal .col-action').forEach(cell => {
             cell.style.display = showActionColumn ? '' : 'none';
         });
@@ -657,23 +634,22 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function renderGameStatusBanner(gs, me) {
         const banner = document.getElementById('game-status-banner');
-        const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
+        const bannerMobile = document.getElementById('dashboard-status-banner');
 
         if (gs.isPaused) {
             updatePauseBanner(gs);
             return;
         }
         if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
-        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile); // NEW
+        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile);
 
         const currentPlayer = gs.players.find(p => p.playerId === gs.currentPlayerId);
         if (!currentPlayer) {
             banner.textContent = "Waiting for game to start...";
-            bannerMobile.textContent = "Waiting for game to start..."; // NEW
+            bannerMobile.textContent = "Waiting for game to start...";
             return;
         }
 
-        // Use stored previous log for move banner, current log for status banner
         const latestLog = gs.logHistory[0] || "Game Started.";
         const roundText = `(Round ${gs.currentRound || 1})`;
 
@@ -686,31 +662,31 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         banner.textContent = bannerText;
-        bannerMobile.textContent = bannerText; // NEW
+        bannerMobile.textContent = bannerText;
     }
 
     function updatePauseBanner(gs) {
         const banner = document.getElementById('game-status-banner');
-        const bannerMobile = document.getElementById('dashboard-status-banner'); // NEW
+        const bannerMobile = document.getElementById('dashboard-status-banner');
 
         if (pauseCountdownInterval) clearInterval(pauseCountdownInterval);
-        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile); // NEW
+        if (pauseCountdownIntervalMobile) clearInterval(pauseCountdownIntervalMobile);
 
         const updateBanners = () => {
             const remaining = Math.max(0, Math.round((gs.pauseEndTime - Date.now()) / 1000));
             const bannerText = `⏳ Game Paused. Waiting for ${gs.pausedForPlayerNames.join(', ')}... (${remaining}s) ⏳`;
 
             banner.innerHTML = bannerText;
-            bannerMobile.innerHTML = bannerText; // NEW
+            bannerMobile.innerHTML = bannerText;
 
             if (remaining === 0) {
                 clearInterval(pauseCountdownInterval);
-                clearInterval(pauseCountdownIntervalMobile); // NEW
+                clearInterval(pauseCountdownIntervalMobile);
             }
         };
         updateBanners();
         pauseCountdownInterval = setInterval(updateBanners, 1000);
-        pauseCountdownIntervalMobile = setInterval(updateBanners, 1000); // NEW
+        pauseCountdownIntervalMobile = setInterval(updateBanners, 1000);
     }
 
     function renderLogModal(logHistory) {
@@ -723,7 +699,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function createCardImageElement(card, numDecks) {
+    // *** MODIFIED: Accept isFungible flag to control tint ***
+    function createCardImageElement(card, numDecks, isFungible) {
         const img = document.createElement('img');
         img.className = 'card-img';
         const suit = SUIT_MAP[card.suit];
@@ -734,9 +711,9 @@ window.addEventListener('DOMContentLoaded', () => {
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
 
-
-        const deckIndex = card.id.split('-')[2];
-        if (numDecks == 2 && deckIndex === '1') {
+        const deckIndex = card.id.split('-')[2]; // '0', '1', 'c1', 'c2'
+        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+        if (numDecks == 2 && !isFungible && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
 
@@ -744,11 +721,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // *** ADDED LOGGING INSIDE THIS FUNCTION ***
-    function createRiverCardImageElement(suit, rank, deckIndex, numDecks) {
-        // *** START LOGGING ***
-        console.log(`CLIENT CREATE_IMG: Inputs - Suit: ${suit}, Rank: ${rank}, DeckIndex: ${deckIndex}`);
-        // *** END LOGGING ***
+    // *** MODIFIED: Accept isFungible flag to control tint ***
+    function createRiverCardImageElement(suit, rank, deckIndex, numDecks, isFungible) {
         const img = document.createElement('img');
         img.className = 'river-card';
         const suitName = SUIT_MAP[suit];
@@ -756,11 +730,8 @@ window.addEventListener('DOMContentLoaded', () => {
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
 
-
-        if (numDecks == 2 && deckIndex === '1') {
-             // *** ADDED LOGGING ***
-             console.log(`CLIENT CREATE_IMG: Adding deck-1-tint for ${rank} of ${suit}`);
-             // *** END LOGGING ***
+        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+        if (numDecks == 2 && !isFungible && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
 
@@ -782,9 +753,49 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    function renderRiver(boardState, numDecks) {
+    // *** NEW: Main renderRiver function to route logic ***
+    function renderRiver(boardState, settings) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
+        const gameMode = settings.gameMode;
+        const numDecks = settings.deckCount;
+        
+        if (gameMode === 'fungible') {
+            renderFungibleRiver(boardState, numDecks);
+        } else {
+            renderStrictRiver(boardState, numDecks);
+        }
+    }
+
+    // *** NEW: Fungible river rendering logic ***
+    function renderFungibleRiver(boardState, numDecks) {
+        const riverContainer = document.getElementById('river-container');
+        const isMobile = window.innerWidth <= 850;
+        const isFungible = true;
+
+        // Render in fixed suit order
+        for (const suitName of SUITS) {
+            const suitLayout = boardState[suitName]; // e.g., boardState['Hearts']
+            
+            // --- Render Row 1 ---
+            // We pass '0' as the deckIndex for visual purposes
+            riverContainer.appendChild(
+                createRiverRow(suitLayout ? suitLayout.row1 : null, suitName, '0', numDecks, isFungible, isMobile)
+            );
+
+            // --- Render Row 2 ---
+            // We pass '1' as the deckIndex for visual purposes
+            riverContainer.appendChild(
+                createRiverRow(suitLayout ? suitLayout.row2 : null, suitName, '1', numDecks, isFungible, isMobile)
+            );
+        }
+    }
+
+    // *** NEW: Old logic refactored into its own function ***
+    function renderStrictRiver(boardState, numDecks) {
+        const riverContainer = document.getElementById('river-container');
+        const isMobile = window.innerWidth <= 850;
+        const isFungible = false;
 
         let suitsToRender = [];
         if (numDecks == 2) {
@@ -796,187 +807,151 @@ window.addEventListener('DOMContentLoaded', () => {
             suitsToRender = ['Hearts-0', 'Diamonds-0', 'Clubs-0', 'Spades-0'];
         }
 
-        const isMobile = window.innerWidth <= 850;
-
         suitsToRender.forEach(suitKey => {
             const layout = boardState[suitKey];
-            const row = document.createElement('div');
-            row.className = 'river-row';
-
-            const [suitName, deckIndex] = suitKey.split('-'); // Defined here for the outer loop iteration
-
-            // --- NEW: Add Desktop Label ---
-            if (!isMobile) {
-                const labelEl = document.createElement('div');
-                labelEl.className = 'river-row-label';
-                if (numDecks == 2) {
-                    labelEl.textContent = `${suitName} (Deck ${parseInt(deckIndex) + 1})`;
-                } else {
-                    labelEl.textContent = suitName;
-                }
-                row.appendChild(labelEl);
-            }
-            // --- END NEW ---
-
-            if (!layout) {
-
-                 if (isMobile) {
-                    const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
-                    row.innerHTML = `<div class="river-placeholder">${label}</div>`;
-                 } else {
-
-                    ALL_RANKS.forEach((rank, i) => {
-                        if (i === 6) {
-                            row.appendChild(createRiverPlaceholder('7'));
-                        } else {
-                            row.appendChild(createEmptyPlaceholder());
-                        }
-                    });
-                 }
-            } else {
-
-                const lowRankVal = layout.low;
-                const highRankVal = layout.high;
-
-                if (isMobile) {
-
-                    if (lowRankVal > 1) {
-                        const prevRank = ALL_RANKS[lowRankVal - 2];
-                        row.appendChild(createRiverPlaceholder(prevRank));
-                    }
-
-
-                    for (let r = lowRankVal; r <= highRankVal; r++) {
-                        const rankStr = ALL_RANKS[r-1];
-                        const currentDeckIndex = deckIndex; // FIX ATTEMPT: Re-scope deckIndex
-                        if (rankStr) {
-                            // *** ADDED REFINED LOGGING ***
-                            console.log(`-- Before Create Call [Mobile] -- Suit: ${suitName}, Rank: ${rankStr}, DeckIdx: ${currentDeckIndex}`);
-                            // *** END REFINED LOGGING ***
-                            const cardEl = createRiverCardImageElement(suitName, rankStr, currentDeckIndex, numDecks); // Use re-scoped variable
-
-                            // MODIFIED: Stack all cards after the first one
-                            if (r > lowRankVal) {
-                                cardEl.classList.add('bunched');
-                            }
-                            row.appendChild(cardEl);
-                        }
-                    }
-
-
-                    if (highRankVal < 13) {
-                        const nextRank = ALL_RANKS[highRankVal];
-                        row.appendChild(createRiverPlaceholder(nextRank));
-                    }
-                } else { // Desktop rendering
-
-                    ALL_RANKS.forEach((rankStr, i) => {
-                        const rankVal = i + 1;
-                        const currentDeckIndex = deckIndex; // FIX ATTEMPT: Re-scope deckIndex
-                        if (rankVal >= lowRankVal && rankVal <= highRankVal) {
-                            // *** ADDED REFINED LOGGING ***
-                            console.log(`-- Before Create Call [Desktop] -- Suit: ${suitName}, Rank: ${rankStr}, DeckIdx: ${currentDeckIndex}`);
-                            // *** END REFINED LOGGING ***
-                            row.appendChild(createRiverCardImageElement(suitName, rankStr, currentDeckIndex, numDecks)); // Use re-scoped variable
-                        } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
-
-                            row.appendChild(createRiverPlaceholder(rankStr));
-                        } else {
-
-                            row.appendChild(createEmptyPlaceholder());
-                        }
-                    });
-                }
-            }
-            riverContainer.appendChild(row);
+            const [suitName, deckIndex] = suitKey.split('-');
+            riverContainer.appendChild(
+                createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile)
+            );
         });
     }
 
+    // *** NEW: Universal row-building helper function ***
+    function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
+        const row = document.createElement('div');
+        row.className = 'river-row';
 
-    // *** MODIFIED: Accept and use deckMode ***
-    function getValidMoves(hand, boardState, isFirstMove, deckMode) {
-        const validMoves = [];
-        if (!hand) return [];
-
-        if (isFirstMove) {
-            const sevenOfHearts = hand.find(c => c.id === '7-Hearts-0');
-            return sevenOfHearts ? [sevenOfHearts] : [];
-        }
-
-        for (const card of hand) {
-            const deckIndex = card.id.split('-')[2];
-            const cardRankVal = RANK_ORDER[card.rank];
-            const suit = card.suit;
-
-            if (card.rank === '7') {
-                if (deckMode === 'fungible') {
-                    // Valid if NEITHER river for this suit exists
-                    const suitKey0 = `${suit}-0`;
-                    const suitKey1 = `${suit}-1`;
-                    if (!boardState[suitKey0] && !boardState[suitKey1]) {
-                        validMoves.push(card);
-                    }
-                } else {
-                    // Original logic: valid if THIS river doesn't exist
-                    const suitKey = `${suit}-${deckIndex}`;
-                    if (!boardState[suitKey]) {
-                        validMoves.push(card);
-                    }
-                }
-                continue; // Skip the rest for '7's
+        // --- Add Desktop Label ---
+        if (!isMobile) {
+            const labelEl = document.createElement('div');
+            labelEl.className = 'river-row-label';
+            if (numDecks == 2) {
+                // In fungible mode, label as Deck 1 / Deck 2. In strict mode, use deck index.
+                const deckLabel = isFungible ? (parseInt(deckIndex) + 1) : (parseInt(deckIndex) + 1);
+                labelEl.textContent = `${suitName} (Deck ${deckLabel})`;
+            } else {
+                labelEl.textContent = suitName;
             }
+            row.appendChild(labelEl);
+        }
+        // --- END Label ---
 
-            // Check non-'7' cards
-            if (deckMode === 'fungible') {
-                // Check against BOTH rivers for this suit
-                const suitKey0 = `${suit}-0`;
-                const suitKey1 = `${suit}-1`;
-                const layout0 = boardState[suitKey0];
-                const layout1 = boardState[suitKey1];
-                let canPlay = false;
+        if (!layout) {
+             if (isMobile) {
+                const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
+                row.innerHTML = `<div class="river-placeholder">${label}</div>`;
+             } else {
+                // Desktop placeholder row
+                ALL_RANKS.forEach((rank, i) => {
+                    if (i === 6) { // 7
+                        row.appendChild(createRiverPlaceholder('7'));
+                    } else {
+                        row.appendChild(createEmptyPlaceholder());
+                    }
+                });
+             }
+        } else {
+            // Layout exists, render cards
+            const lowRankVal = layout.low;
+            const highRankVal = layout.high;
 
-                if (layout0 && (cardRankVal === layout0.high + 1 || cardRankVal === layout0.low - 1)) {
-                    canPlay = true;
+            if (isMobile) {
+                // --- Mobile Card Rendering (Bunched) ---
+                if (lowRankVal > 1) {
+                    const prevRank = ALL_RANKS[lowRankVal - 2];
+                    row.appendChild(createRiverPlaceholder(prevRank));
                 }
-                if (!canPlay && layout1 && (cardRankVal === layout1.high + 1 || cardRankVal === layout1.low - 1)) {
-                    canPlay = true;
+
+                for (let r = lowRankVal; r <= highRankVal; r++) {
+                    const rankStr = ALL_RANKS[r-1];
+                    if (rankStr) {
+                        const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible);
+                        if (r > lowRankVal) {
+                            cardEl.classList.add('bunched');
+                        }
+                        row.appendChild(cardEl);
+                    }
                 }
 
-                if (canPlay) {
-                    validMoves.push(card);
+                if (highRankVal < 13) {
+                    const nextRank = ALL_RANKS[highRankVal];
+                    row.appendChild(createRiverPlaceholder(nextRank));
                 }
             } else {
-                // Original logic: check only the specific river
-                const suitKey = `${suit}-${deckIndex}`;
-                const suitLayout = boardState[suitKey];
-                if (suitLayout) {
-                    if (cardRankVal === suitLayout.high + 1 || cardRankVal === suitLayout.low - 1) {
-                         validMoves.push(card);
+                // --- Desktop Card Rendering (Grid) ---
+                ALL_RANKS.forEach((rankStr, i) => {
+                    const rankVal = i + 1;
+                    if (rankVal >= lowRankVal && rankVal <= highRankVal) {
+                        row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible));
+                    } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
+                        row.appendChild(createRiverPlaceholder(rankStr));
+                    } else {
+                        row.appendChild(createEmptyPlaceholder());
                     }
-                }
+                });
             }
         }
-        return validMoves;
+        return row;
+    }
+    // *** END: River Logic ***
+
+
+    // *** MODIFIED: getValidMoves split for fungible mode ***
+    function getValidMoves(hand, gs) {
+        if (!hand) return [];
+        
+        const boardState = gs.boardState;
+        const isFirstMove = gs.isFirstMove;
+        
+        if (gs.settings.gameMode === 'fungible') {
+            // --- Fungible Logic ---
+            if (isFirstMove) {
+                const startCard = hand.find(c => c.id === '7-Hearts-c1');
+                return startCard ? [startCard] : [];
+            }
+            
+            const validMoves = [];
+            for (const card of hand) {
+                if (checkValidMoveFungible(card, boardState, hand, false)) {
+                    validMoves.push(card);
+                }
+            }
+            return validMoves;
+
+        } else {
+            // --- Strict (Original) Logic ---
+            if (isFirstMove) {
+                const startCard = hand.find(c => c.id === '7-Hearts-0');
+                return startCard ? [startCard] : [];
+            }
+
+            const validMoves = [];
+            for (const card of hand) {
+                if (checkValidMoveStrict(card, boardState, hand, false)) {
+                    validMoves.push(card);
+                }
+            }
+            return validMoves;
+        }
     }
 
     // *** NEW: Move Announcement Logic ***
     function handleMoveAnnouncement(currentState, prevState) {
         if (!prevState || !currentState || !currentState.logHistory || currentState.logHistory.length === 0) {
-            return; // No previous state or no logs
+            return;
         }
 
         const latestLog = currentState.logHistory[0];
         const previousLog = prevState.logHistory[0];
 
         if (latestLog === previousLog || latestLog.includes('Starting') || latestLog.includes('won') || latestLog.includes('Game initialized')) {
-             return; // No new move or it's a game start/end log
+             return;
         }
 
         let message = "";
         const nextPlayer = currentState.players.find(p => p.playerId === currentState.currentPlayerId);
         const nextPlayerName = nextPlayer ? (nextPlayer.isBot ? `[Bot] ${nextPlayer.name}` : nextPlayer.name) : "Unknown";
 
-        // Try to parse the log message
         const playedMatch = latestLog.match(/^(.+?) played the (.+ of .+)\./);
         const passedMatch = latestLog.match(/^(.+?) passed\./);
 
@@ -988,7 +963,6 @@ window.addEventListener('DOMContentLoaded', () => {
             const playerName = passedMatch[1];
              message = `${playerName} skipped; Next turn: ${nextPlayerName}`;
         } else {
-            // Fallback if parsing fails - show raw log
             message = latestLog + ` | Next: ${nextPlayerName}`;
         }
 
@@ -1002,16 +976,14 @@ window.addEventListener('DOMContentLoaded', () => {
         banner.textContent = message;
         banner.classList.add('visible');
 
-        // Clear any existing timer
         if (moveAnnouncementTimeout) {
             clearTimeout(moveAnnouncementTimeout);
         }
 
-        // Set new timer to hide
         moveAnnouncementTimeout = setTimeout(() => {
             banner.classList.remove('visible');
             moveAnnouncementTimeout = null;
-        }, 3000); // Display for 3 seconds
+        }, 3000);
     }
 
     // *** NEW: Winner Announcement Logic ***
@@ -1023,14 +995,14 @@ window.addEventListener('DOMContentLoaded', () => {
         if (!overlay || !textElement || !subtextElement) return;
 
         textElement.textContent = mainText;
-        subtextElement.textContent = subText || ''; // Show subtext if provided
+        subtextElement.textContent = subText || '';
         overlay.classList.remove('hidden');
         startRainAnimation();
 
         setTimeout(() => {
             hideWinnerAnnouncement();
             if (callback) {
-                callback(); // Execute callback after duration (e.g., show score modal)
+                callback();
             }
         }, duration);
     }
@@ -1044,26 +1016,25 @@ window.addEventListener('DOMContentLoaded', () => {
     // *** NEW: Rain Animation ***
     function startRainAnimation() {
         const container = document.getElementById('winner-animation-container');
-        if (!container || rainInterval) return; // Prevent multiple intervals
+        if (!container || rainInterval) return;
 
-        const elements = ['⭐', '🌸', '✨', '🎉', '🌟']; // Emojis to rain down
+        const elements = ['⭐', '🌸', '✨', '🎉', '🌟'];
 
         rainInterval = setInterval(() => {
             const rainElement = document.createElement('div');
             rainElement.classList.add('rain-element');
             rainElement.textContent = elements[Math.floor(Math.random() * elements.length)];
             rainElement.style.left = Math.random() * 100 + 'vw';
-            rainElement.style.animationDuration = (Math.random() * 2 + 3) + 's'; // Duration between 3-5 seconds
-            rainElement.style.fontSize = (Math.random() * 1 + 1) + 'em'; // Size between 1-2em
+            rainElement.style.animationDuration = (Math.random() * 2 + 3) + 's';
+            rainElement.style.fontSize = (Math.random() * 1 + 1) + 'em';
 
             container.appendChild(rainElement);
 
-            // Remove element after it falls
             setTimeout(() => {
                 rainElement.remove();
-            }, 5000); // Corresponds to max animation duration
+            }, 5000);
 
-        }, 100); // Create new element every 100ms
+        }, 100);
     }
 
     function stopRainAnimation() {
@@ -1073,7 +1044,7 @@ window.addEventListener('DOMContentLoaded', () => {
             rainInterval = null;
         }
         if (container) {
-            container.innerHTML = ''; // Clear existing rain elements
+            container.innerHTML = '';
         }
     }
 
@@ -1102,13 +1073,10 @@ window.addEventListener('DOMContentLoaded', () => {
             const deltaX = touchEndX - touchStartX;
             const deltaY = touchEndY - touchStartY;
 
-            // Check if it's a significant horizontal swipe and not a vertical scroll
             if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
                 if (deltaX < 0) {
-                    // Swipe Left -> Show Table
                     document.getElementById('show-table-btn').click();
                 } else {
-                    // Swipe Right -> Show Dashboard (My Hand)
                     document.getElementById('show-dashboard-btn').click();
                 }
             }

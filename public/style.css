@@ -10,6 +10,39 @@
     --sienna-border: #a0522d;
 }
 
+/* *** NEW: Animation for playable cards *** */
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+    50% {
+        box-shadow: 0 0 25px #ffc400;
+        border-color: #ffc400;
+    }
+    100% {
+        box-shadow: 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+}
+/* *** NEW: Combo animation for playable Deck 2 (Strict) cards *** */
+@keyframes pulse-glow-combo {
+    0% {
+        box-shadow: inset 0 0 0 4px var(--busted-red), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+    50% {
+        box-shadow: inset 0 0 0 4px var(--busted-red), 0 0 25px #ffc400;
+        border-color: #ffc400;
+    }
+    100% {
+        box-shadow: inset 0 0 0 4px var(--busted-red), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+}
+/* *** END NEW *** */
+
+
 body {
     /* MODIFIED: Font family changed */
     font-family: Helvetica, Arial, sans-serif;
@@ -38,28 +71,33 @@ body {
 #player-list { list-style: none; padding: 0; }
 #player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
 .kick-btn { font-size: 0.8em; padding: 3px 7px; }
-#host-game-settings { /* MODIFIED: Removed flex */
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    border-radius: 5px;
-    margin: 15px 0;
-    text-align: left;
-}
-#host-game-settings h4 {
-    margin: 0 0 10px 0;
+
+/* *** MODIFIED: Lobby Settings *** */
+.game-settings { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; margin: 15px 0; text-align: left; }
+.setting-group-label {
+    font-size: 1.1em;
+    font-weight: bold;
     color: var(--gold-accent);
+    display: block;
+    margin-bottom: 10px;
 }
-.setting-group { /* MODIFIED: Added margin for spacing */
-    display: flex; /* Kept flex for alignment within group */
+.setting-option {
+    display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 15px; /* Increased margin-bottom */
+    margin-bottom: 12px; /* Double line spacing */
 }
-.setting-group:last-child {
-    margin-bottom: 8px; /* Remove extra margin from last item */
+.setting-option:last-child {
+    margin-bottom: 0;
 }
-.setting-group label { font-size: 1em; color: var(--light-text); }
-.setting-group input[type="radio"] { accent-color: var(--gold-accent); }
+.setting-option label { font-size: 1em; color: var(--light-text); }
+.setting-option input[type="radio"] { 
+    accent-color: var(--gold-accent); 
+    width: 18px;
+    height: 18px;
+}
+/* *** END MODIFICATION *** */
+
 /* --- END: Join & Lobby --- */
 
 
@@ -252,29 +290,33 @@ body {
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
     cursor: not-allowed;
+    /* *** MODIFIED: Add transparent border for size consistency *** */
+    border: 3px solid transparent;
+    box-sizing: border-box;
 }
 .card-img:hover {
     transform: translateY(-10px);
     z-index: 10;
 }
+
+/* *** MODIFIED: Playable Card Glow *** */
 .card-img.playable-card {
     cursor: pointer;
-    box-shadow: 0 0 20px var(--gold-accent);
     border: 3px solid var(--gold-accent);
-    box-sizing: border-box;
+    animation: pulse-glow 1.5s infinite;
 }
 .card-img.playable-card:hover {
     transform: translateY(-10px) scale(1.05);
 }
 
-/* --- MODIFIED: Deck 2 Tint (Border) --- */
+/* *** MODIFIED: Deck 2 Tint (Inset Shadow) *** */
 .deck-1-tint {
-    border: 10px solid var(--busted-red, #c70039); /* INCREASED */
-    box-sizing: border-box;
+    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039);
 }
-/* Ensure playable border overrides tint border */
+
+/* *** NEW: Combo animation for playable strict Deck 2 card *** */
 .card-img.playable-card.deck-1-tint {
-    border: 3px solid var(--gold-accent); /* Kept at 3px */
+    animation: pulse-glow-combo 1.5s infinite;
 }
 /* --- END: SVG Card Styles --- */
 
@@ -348,8 +390,9 @@ body {
     max-width: 95px; /* MODIFIED: Bigger cards */
     margin: 0 auto;
 }
+/* *** MODIFIED: River card tint uses inset shadow *** */
 .river-card.deck-1-tint {
-    border: 10px solid var(--busted-red, #c70039); /* INCREASED */
+    box-shadow: inset 0 0 0 4px var(--busted-red, #c70039); /* Tint for river cards */
     box-sizing: border-box;
 }
 
@@ -781,6 +824,8 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     .card-img {
         width: 80px; /* 3-card layout */
         height: 112px;
+        /* *** MODIFIED: Ensure border is consistent on mobile *** */
+        border-width: 2px;
     }
 
     /* --- Mobile River Overrides --- */
