@@ -744,7 +744,11 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
+    // *** ADDED LOGGING INSIDE THIS FUNCTION ***
     function createRiverCardImageElement(suit, rank, deckIndex, numDecks) {
+        // *** START LOGGING ***
+        console.log(`CLIENT CREATE_IMG: Inputs - Suit: ${suit}, Rank: ${rank}, DeckIndex: ${deckIndex}`);
+        // *** END LOGGING ***
         const img = document.createElement('img');
         img.className = 'river-card';
         const suitName = SUIT_MAP[suit];
@@ -754,6 +758,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
         if (numDecks == 2 && deckIndex === '1') {
+             // *** ADDED LOGGING ***
+             console.log(`CLIENT CREATE_IMG: Adding deck-1-tint for ${rank} of ${suit}`);
+             // *** END LOGGING ***
             img.classList.add('deck-1-tint');
         }
 
@@ -796,7 +803,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const row = document.createElement('div');
             row.className = 'river-row';
 
-            const [suitName, deckIndex] = suitKey.split('-');
+            const [suitName, deckIndex] = suitKey.split('-'); // Defined here for the outer loop iteration
 
             // --- NEW: Add Desktop Label ---
             if (!isMobile) {
@@ -841,11 +848,12 @@ window.addEventListener('DOMContentLoaded', () => {
 
                     for (let r = lowRankVal; r <= highRankVal; r++) {
                         const rankStr = ALL_RANKS[r-1];
+                        const currentDeckIndex = deckIndex; // FIX ATTEMPT: Re-scope deckIndex
                         if (rankStr) {
                             // *** ADDED REFINED LOGGING ***
-                            console.log(`CLIENT DEBUG: About to create image. Suit: ${suitName}, Rank: ${rankStr}, DeckIndex: ${deckIndex}`);
+                            console.log(`-- Before Create Call [Mobile] -- Suit: ${suitName}, Rank: ${rankStr}, DeckIdx: ${currentDeckIndex}`);
                             // *** END REFINED LOGGING ***
-                            const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
+                            const cardEl = createRiverCardImageElement(suitName, rankStr, currentDeckIndex, numDecks); // Use re-scoped variable
 
                             // MODIFIED: Stack all cards after the first one
                             if (r > lowRankVal) {
@@ -860,15 +868,16 @@ window.addEventListener('DOMContentLoaded', () => {
                         const nextRank = ALL_RANKS[highRankVal];
                         row.appendChild(createRiverPlaceholder(nextRank));
                     }
-                } else {
+                } else { // Desktop rendering
 
                     ALL_RANKS.forEach((rankStr, i) => {
                         const rankVal = i + 1;
+                        const currentDeckIndex = deckIndex; // FIX ATTEMPT: Re-scope deckIndex
                         if (rankVal >= lowRankVal && rankVal <= highRankVal) {
                             // *** ADDED REFINED LOGGING ***
-                            console.log(`CLIENT DEBUG: About to create image. Suit: ${suitName}, Rank: ${rankStr}, DeckIndex: ${deckIndex}`);
+                            console.log(`-- Before Create Call [Desktop] -- Suit: ${suitName}, Rank: ${rankStr}, DeckIdx: ${currentDeckIndex}`);
                             // *** END REFINED LOGGING ***
-                            row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks));
+                            row.appendChild(createRiverCardImageElement(suitName, rankStr, currentDeckIndex, numDecks)); // Use re-scoped variable
                         } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
 
                             row.appendChild(createRiverPlaceholder(rankStr));
