@@ -745,14 +745,24 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function renderRiver(boardState, settings) {
         const riverContainer = document.getElementById('river-container');
-        riverContainer.innerHTML = '';
+        riverContainer.innerHTML = ''; // Clear previous render
         const gameMode = settings.gameMode;
         const numDecks = settings.deckCount;
-        
-        if (gameMode === 'fungible') {
-            renderFungibleRiver(boardState, numDecks);
-        } else {
-            renderStrictRiver(boardState, numDecks);
+
+        if (!riverContainer) {
+            console.error("River container not found!");
+            return;
+        }
+
+        try { // Add error handling
+            if (gameMode === 'fungible') {
+                renderFungibleRiver(boardState, numDecks);
+            } else {
+                renderStrictRiver(boardState, numDecks);
+            }
+        } catch (error) {
+            console.error("Error rendering river:", error);
+            riverContainer.innerHTML = '<p style="color: red;">Error rendering game table. Please check console.</p>';
         }
     }
 
@@ -762,15 +772,23 @@ window.addEventListener('DOMContentLoaded', () => {
         const isFungible = true;
 
         for (const suitName of SUITS) {
-            const suitLayout = boardState[suitName];
-            
-            riverContainer.appendChild(
-                createRiverRow(suitLayout ? suitLayout.row1 : null, suitName, '0', numDecks, isFungible, isMobile)
-            );
+            const suitLayout = boardState[suitName]; // e.g., { row1: {low: 7, high: 8}, row2: {low: 7, high: 7} } or undefined
 
-            riverContainer.appendChild(
-                createRiverRow(suitLayout ? suitLayout.row2 : null, suitName, '1', numDecks, isFungible, isMobile)
-            );
+            // Create and append Row 1
+            const row1Element = createRiverRow(suitLayout ? suitLayout.row1 : null, suitName, '0', numDecks, isFungible, isMobile);
+            if (row1Element) { // Add safety check
+                riverContainer.appendChild(row1Element);
+            } else {
+                console.error("Failed to create row 1 for", suitName);
+            }
+
+            // Create and append Row 2
+            const row2Element = createRiverRow(suitLayout ? suitLayout.row2 : null, suitName, '1', numDecks, isFungible, isMobile);
+             if (row2Element) { // Add safety check
+                riverContainer.appendChild(row2Element);
+            } else {
+                 console.error("Failed to create row 2 for", suitName);
+            }
         }
     }
 
@@ -790,91 +808,99 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         suitsToRender.forEach(suitKey => {
-            const layout = boardState[suitKey];
+            const layout = boardState[suitKey]; // e.g., {low: 7, high: 8} or undefined
             const [suitName, deckIndex] = suitKey.split('-');
-            riverContainer.appendChild(
-                createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile)
-            );
+
+            const rowElement = createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile);
+            if (rowElement) { // Add safety check
+                 riverContainer.appendChild(rowElement);
+            } else {
+                 console.error("Failed to create strict row for", suitKey);
+            }
         });
     }
 
-    // *** MODIFIED: Corrected Placeholder Logic ***
+    // *** MODIFIED: Refined Placeholder Logic ***
     function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
-        const row = document.createElement('div');
-        row.className = 'river-row';
+        try { // Add error handling within the function
+            const row = document.createElement('div');
+            row.className = 'river-row';
 
-        // Add Desktop Label (Logic remains the same)
-        if (!isMobile) {
-            const labelEl = document.createElement('div');
-            labelEl.className = 'river-row-label';
-            if (numDecks == 2) {
-                const deckLabel = parseInt(deckIndex) + 1;
-                labelEl.textContent = `${suitName} (Deck ${deckLabel})`;
-            } else {
-                labelEl.textContent = suitName;
-            }
-            row.appendChild(labelEl);
-        }
-
-        if (!layout) {
-             // --- Placeholder Logic ---
-             if (isMobile) {
-                 // Mobile: Single placeholder div with text
-                const placeholder = document.createElement('div');
-                placeholder.className = 'river-placeholder';
-                const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
-                placeholder.textContent = label;
-                row.appendChild(placeholder); // Use appendChild
-             } else {
-                 // Desktop: Grid of 13 placeholders
-                ALL_RANKS.forEach((rank, i) => {
-                    if (i === 6) { // 7
-                        row.appendChild(createRiverPlaceholder('7'));
-                    } else {
-                        row.appendChild(createEmptyPlaceholder());
-                    }
-                });
-             }
-        } else {
-            // --- Card Rendering Logic (Remains the same) ---
-            const lowRankVal = layout.low;
-            const highRankVal = layout.high;
-
-            if (isMobile) {
-                if (lowRankVal > 1) {
-                    const prevRank = ALL_RANKS[lowRankVal - 2];
-                    row.appendChild(createRiverPlaceholder(prevRank));
+            // Add Desktop Label
+            if (!isMobile) {
+                const labelEl = document.createElement('div');
+                labelEl.className = 'river-row-label';
+                if (numDecks == 2) {
+                    const deckLabel = parseInt(deckIndex) + 1; // Always show Deck 1 or Deck 2
+                    labelEl.textContent = `${suitName} (Deck ${deckLabel})`;
+                } else {
+                    labelEl.textContent = suitName;
                 }
+                row.appendChild(labelEl);
+            }
 
-                for (let r = lowRankVal; r <= highRankVal; r++) {
-                    const rankStr = ALL_RANKS[r-1];
-                    if (rankStr) {
-                        const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible);
-                        if (r > lowRankVal) {
-                            cardEl.classList.add('bunched');
+            if (!layout) {
+                // --- RENDER PLACEHOLDERS ---
+                if (isMobile) {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'river-placeholder';
+                    const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
+                    placeholder.textContent = label;
+                    row.appendChild(placeholder);
+                } else {
+                    // Desktop Grid Placeholders
+                    ALL_RANKS.forEach((rank, i) => {
+                        if (i === 6) { // Position for the 7
+                            row.appendChild(createRiverPlaceholder('7'));
+                        } else {
+                            row.appendChild(createEmptyPlaceholder());
                         }
-                        row.appendChild(cardEl);
-                    }
-                }
-
-                if (highRankVal < 13) {
-                    const nextRank = ALL_RANKS[highRankVal];
-                    row.appendChild(createRiverPlaceholder(nextRank));
+                    });
                 }
             } else {
-                ALL_RANKS.forEach((rankStr, i) => {
-                    const rankVal = i + 1;
-                    if (rankVal >= lowRankVal && rankVal <= highRankVal) {
-                        row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible));
-                    } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
-                        row.appendChild(createRiverPlaceholder(rankStr));
-                    } else {
-                        row.appendChild(createEmptyPlaceholder());
+                // --- RENDER CARDS ---
+                const lowRankVal = layout.low;
+                const highRankVal = layout.high;
+
+                if (isMobile) {
+                    // Mobile Bunched Cards
+                    if (lowRankVal > 1) {
+                        const prevRank = ALL_RANKS[lowRankVal - 2];
+                        row.appendChild(createRiverPlaceholder(prevRank));
                     }
-                });
+                    for (let r = lowRankVal; r <= highRankVal; r++) {
+                        const rankStr = ALL_RANKS[r - 1];
+                        if (rankStr) {
+                            const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible);
+                            if (r > lowRankVal) {
+                                cardEl.classList.add('bunched');
+                            }
+                            row.appendChild(cardEl);
+                        }
+                    }
+                    if (highRankVal < 13) {
+                        const nextRank = ALL_RANKS[highRankVal];
+                        row.appendChild(createRiverPlaceholder(nextRank));
+                    }
+                } else {
+                    // Desktop Grid Cards
+                    ALL_RANKS.forEach((rankStr, i) => {
+                        const rankVal = i + 1;
+                        if (rankVal >= lowRankVal && rankVal <= highRankVal) {
+                            row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks, isFungible));
+                        } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
+                            row.appendChild(createRiverPlaceholder(rankStr));
+                        } else {
+                            row.appendChild(createEmptyPlaceholder());
+                        }
+                    });
+                }
             }
+            return row; // Return the successfully created row
+        } catch (error) {
+            console.error("Error creating river row:", { layout, suitName, deckIndex, error });
+            return null; // Return null if an error occurred
         }
-        return row; // Always return the created row element
     }
 
 
@@ -930,11 +956,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // *** This function now correctly calls the helpers ***
     function getValidMoves(hand, gs) {
-        if (!hand) return [];
+        if (!hand || !gs || !gs.settings) return []; // Added safety checks
         
         const boardState = gs.boardState;
         const isFirstMove = gs.isFirstMove;
         
+        // Ensure settings exist before accessing gameMode
+        if (!gs.settings.gameMode) {
+             console.error("gameMode is missing from settings:", gs.settings);
+             return [];
+        }
+
         if (gs.settings.gameMode === 'fungible') {
             // --- Fungible Logic ---
             if (isFirstMove) {
@@ -944,6 +976,7 @@ window.addEventListener('DOMContentLoaded', () => {
             
             const validMoves = [];
             for (const card of hand) {
+                // Pass only necessary parts of boardState if possible, or ensure it's valid
                 if (checkValidMoveFungible(card, boardState, hand, false)) {
                     validMoves.push(card);
                 }
@@ -959,7 +992,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const validMoves = [];
             for (const card of hand) {
-                if (checkValidMoveStrict(card, boardState, hand, false)) {
+                 if (checkValidMoveStrict(card, boardState, hand, false)) {
                     validMoves.push(card);
                 }
             }
