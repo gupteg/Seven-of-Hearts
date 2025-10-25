@@ -766,8 +766,9 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     }
 
     /* --- Mobile River Overrides --- */
-    /* NEW: Prevent river container growing into padding */
-    #river-container {
+    /* NEW: Prevent containers growing into padding */
+    #river-container,
+    #my-hand-container {
         flex-grow: 0;
     }
 
