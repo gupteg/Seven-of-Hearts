@@ -52,7 +52,6 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
-            // *** MODIFIED: Read the 'deck-count' value which is now '1', '2', or 'fungible' ***
             const deckCountSetting = document.querySelector('input[name="deck-count"]:checked').value;
 
             socket.emit('startGame', {
@@ -174,6 +173,7 @@ window.addEventListener('DOMContentLoaded', () => {
             const cardEl = e.target.closest('.card-img');
             if (cardEl && cardEl.classList.contains('playable-card')) {
                 const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
+                if (!me) return; // Safeguard
                 const cardData = me.hand.find(c => c.id === cardEl.dataset.id);
                 if (cardData) {
                     socket.emit('playCard', cardData);
@@ -271,7 +271,6 @@ window.addEventListener('DOMContentLoaded', () => {
         renderMyActions(me, gs);
         renderOtherPlayers(gs.players, me, gs.currentPlayerId, gs.dealerId);
         renderGameStatusBanner(gs, me);
-        // *** MODIFIED: Call the main renderRiver function ***
         renderRiver(gs.boardState, gs.settings);
         renderScoreboard(gs.players);
 
@@ -430,7 +429,6 @@ window.addEventListener('DOMContentLoaded', () => {
     function renderFinalHands(finalHands, scoreboardData) {
         const container = document.getElementById('round-over-hands');
         container.innerHTML = '';
-        // *** MODIFIED: Get settings from gameState ***
         const numDecks = window.gameState?.settings?.deckCount || 1;
         const isFungible = window.gameState?.settings?.gameMode === 'fungible';
 
@@ -457,7 +455,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
                 });
                 sortedHand.forEach(card => {
-                    // *** MODIFIED: Pass isFungible flag ***
                     cardsContainer.appendChild(createSmallCardImage(card, numDecks, isFungible));
                 });
             } else {
@@ -468,7 +465,6 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // *** MODIFIED: Accept isFungible flag to control tint ***
     function createSmallCardImage(card, numDecks, isFungible) {
          const img = document.createElement('img');
         img.className = 'final-card-img';
@@ -477,8 +473,7 @@ window.addEventListener('DOMContentLoaded', () => {
         img.src = `/assets/cards/${suit}_${rank}.svg`;
         img.alt = `${card.rank} of ${card.suit}`;
 
-        const deckIndex = card.id.split('-')[2]; // '0', '1', 'c1', 'c2'
-        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+        const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
@@ -528,14 +523,12 @@ window.addEventListener('DOMContentLoaded', () => {
             return RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
         });
 
-        // *** MODIFIED: Pass gs to getValidMoves ***
         const validMoves = getValidMoves(me.hand, gs);
         const validMoveIds = new Set(validMoves.map(card => card.id));
         const numDecks = gs.settings.deckCount;
         const isFungible = gs.settings.gameMode === 'fungible';
 
         sortedHand.forEach(card => {
-            // *** MODIFIED: Pass isFungible flag ***
             const cardEl = createCardImageElement(card, numDecks, isFungible);
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
@@ -551,7 +544,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const fallbackBtn = document.getElementById('start-next-round-fallback-btn');
 
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
-            // *** MODIFIED: Pass gs to getValidMoves ***
             const validMoves = getValidMoves(me.hand, gs);
             const canPass = validMoves.length === 0;
 
@@ -699,7 +691,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // *** MODIFIED: Accept isFungible flag to control tint ***
     function createCardImageElement(card, numDecks, isFungible) {
         const img = document.createElement('img');
         img.className = 'card-img';
@@ -711,8 +702,8 @@ window.addEventListener('DOMContentLoaded', () => {
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
 
-        const deckIndex = card.id.split('-')[2]; // '0', '1', 'c1', 'c2'
-        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+
+        const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
@@ -721,7 +712,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // *** MODIFIED: Accept isFungible flag to control tint ***
     function createRiverCardImageElement(suit, rank, deckIndex, numDecks, isFungible) {
         const img = document.createElement('img');
         img.className = 'river-card';
@@ -730,7 +720,7 @@ window.addEventListener('DOMContentLoaded', () => {
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
 
-        // Only apply tint if 2 decks, strict mode (not fungible), and card is from deck '1'
+
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
             img.classList.add('deck-1-tint');
         }
@@ -753,7 +743,6 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    // *** NEW: Main renderRiver function to route logic ***
     function renderRiver(boardState, settings) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
@@ -767,31 +756,24 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // *** NEW: Fungible river rendering logic ***
     function renderFungibleRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         const isMobile = window.innerWidth <= 850;
         const isFungible = true;
 
-        // Render in fixed suit order
         for (const suitName of SUITS) {
-            const suitLayout = boardState[suitName]; // e.g., boardState['Hearts']
+            const suitLayout = boardState[suitName];
             
-            // --- Render Row 1 ---
-            // We pass '0' as the deckIndex for visual purposes
             riverContainer.appendChild(
                 createRiverRow(suitLayout ? suitLayout.row1 : null, suitName, '0', numDecks, isFungible, isMobile)
             );
 
-            // --- Render Row 2 ---
-            // We pass '1' as the deckIndex for visual purposes
             riverContainer.appendChild(
                 createRiverRow(suitLayout ? suitLayout.row2 : null, suitName, '1', numDecks, isFungible, isMobile)
             );
         }
     }
 
-    // *** NEW: Old logic refactored into its own function ***
     function renderStrictRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         const isMobile = window.innerWidth <= 850;
@@ -816,34 +798,29 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // *** NEW: Universal row-building helper function ***
     function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
         const row = document.createElement('div');
         row.className = 'river-row';
 
-        // --- Add Desktop Label ---
         if (!isMobile) {
             const labelEl = document.createElement('div');
             labelEl.className = 'river-row-label';
             if (numDecks == 2) {
-                // In fungible mode, label as Deck 1 / Deck 2. In strict mode, use deck index.
-                const deckLabel = isFungible ? (parseInt(deckIndex) + 1) : (parseInt(deckIndex) + 1);
+                const deckLabel = parseInt(deckIndex) + 1;
                 labelEl.textContent = `${suitName} (Deck ${deckLabel})`;
             } else {
                 labelEl.textContent = suitName;
             }
             row.appendChild(labelEl);
         }
-        // --- END Label ---
 
         if (!layout) {
              if (isMobile) {
                 const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
                 row.innerHTML = `<div class="river-placeholder">${label}</div>`;
              } else {
-                // Desktop placeholder row
                 ALL_RANKS.forEach((rank, i) => {
-                    if (i === 6) { // 7
+                    if (i === 6) {
                         row.appendChild(createRiverPlaceholder('7'));
                     } else {
                         row.appendChild(createEmptyPlaceholder());
@@ -851,12 +828,10 @@ window.addEventListener('DOMContentLoaded', () => {
                 });
              }
         } else {
-            // Layout exists, render cards
             const lowRankVal = layout.low;
             const highRankVal = layout.high;
 
             if (isMobile) {
-                // --- Mobile Card Rendering (Bunched) ---
                 if (lowRankVal > 1) {
                     const prevRank = ALL_RANKS[lowRankVal - 2];
                     row.appendChild(createRiverPlaceholder(prevRank));
@@ -878,7 +853,6 @@ window.addEventListener('DOMContentLoaded', () => {
                     row.appendChild(createRiverPlaceholder(nextRank));
                 }
             } else {
-                // --- Desktop Card Rendering (Grid) ---
                 ALL_RANKS.forEach((rankStr, i) => {
                     const rankVal = i + 1;
                     if (rankVal >= lowRankVal && rankVal <= highRankVal) {
@@ -893,10 +867,59 @@ window.addEventListener('DOMContentLoaded', () => {
         }
         return row;
     }
-    // *** END: River Logic ***
 
 
-    // *** MODIFIED: getValidMoves split for fungible mode ***
+    // *** NEW: Client-side logic for fungible move validation ***
+    function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
+        if (isFirstMove) {
+            return card.id === '7-Hearts-c1';
+        }
+        
+        const suitLayout = boardState[card.suit];
+        const cardRankVal = RANK_ORDER[card.rank];
+
+        if (card.rank === '7') {
+            if (!suitLayout) return true;
+            if (suitLayout.row1 && !suitLayout.row2) return true;
+            return false;
+        }
+
+        if (suitLayout) {
+            if (suitLayout.row1) {
+                if (cardRankVal === suitLayout.row1.high + 1) return true;
+                if (cardRankVal === suitLayout.row1.low - 1) return true;
+            }
+            if (suitLayout.row2) {
+                if (cardRankVal === suitLayout.row2.high + 1) return true;
+                if (cardRankVal === suitLayout.row2.low - 1) return true;
+            }
+        }
+        return false;
+    }
+
+    // *** NEW: Client-side logic for strict move validation ***
+    function checkValidMoveStrict(card, boardState, hand, isFirstMove) {
+        if (isFirstMove) {
+            return card.id === '7-Hearts-0';
+        }
+
+        const deckIndex = card.id.split('-')[2];
+        const suitKey = `${card.suit}-${deckIndex}`;
+
+        if (card.rank === '7') {
+            return !boardState[suitKey];
+        }
+
+        const suitLayout = boardState[suitKey];
+        if (suitLayout) {
+            const cardRankVal = RANK_ORDER[card.rank];
+            if (cardRankVal === suitLayout.high + 1) return true;
+            if (cardRankVal === suitLayout.low - 1) return true;
+        }
+        return false;
+    }
+
+    // *** MODIFIED: This function now correctly calls the new helpers ***
     function getValidMoves(hand, gs) {
         if (!hand) return [];
         
@@ -912,7 +935,7 @@ window.addEventListener('DOMContentLoaded', () => {
             
             const validMoves = [];
             for (const card of hand) {
-                if (checkValidMoveFungible(card, boardState, hand, false)) {
+                if (checkValidMoveFungible(card, boardState, hand, false)) { // This function now exists
                     validMoves.push(card);
                 }
             }
@@ -927,7 +950,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             const validMoves = [];
             for (const card of hand) {
-                if (checkValidMoveStrict(card, boardState, hand, false)) {
+                if (checkValidMoveStrict(card, boardState, hand, false)) { // This function now exists
                     validMoves.push(card);
                 }
             }
@@ -935,7 +958,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // *** NEW: Move Announcement Logic ***
     function handleMoveAnnouncement(currentState, prevState) {
         if (!prevState || !currentState || !currentState.logHistory || currentState.logHistory.length === 0) {
             return;
@@ -986,7 +1008,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 3000);
     }
 
-    // *** NEW: Winner Announcement Logic ***
     function showWinnerAnnouncement(mainText, subText, duration, callback) {
         const overlay = document.getElementById('winner-announcement-overlay');
         const textElement = document.getElementById('winner-announcement-text');
@@ -1013,7 +1034,6 @@ window.addEventListener('DOMContentLoaded', () => {
          stopRainAnimation();
     }
 
-    // *** NEW: Rain Animation ***
     function startRainAnimation() {
         const container = document.getElementById('winner-animation-container');
         if (!container || rainInterval) return;
@@ -1048,7 +1068,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- NEW: Mobile Swipe Navigation ---
     function setupSwipeNavigation() {
         const container = document.getElementById('mobile-scroll-container');
         if (!container) return;
