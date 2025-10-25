@@ -13,6 +13,7 @@ window.addEventListener('DOMContentLoaded', () => {
         '5': '5', '4': '4', '3': '3', '2': '2'
     };
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
+    const ALL_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
     
     let isInitialGameRender = true;
@@ -259,7 +260,8 @@ window.addEventListener('DOMContentLoaded', () => {
         }, 10000);
     });
     
-    socket.on('youWereMarkEDAFK', () => {
+    // *** BUG FIX: Corrected typo from 'youWereMarkEDAFK' to 'youWereMarkedAFK' ***
+    socket.on('youWereMarkedAFK', () => {
         document.getElementById('afk-notification-modal').classList.remove('hidden');
     });
 
@@ -411,9 +413,10 @@ window.addEventListener('DOMContentLoaded', () => {
         
         const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
         const validMoveIds = new Set(validMoves.map(card => card.id));
+        const numDecks = gs.settings.deckCount; // Get numDecks
 
         sortedHand.forEach(card => {
-            const cardEl = createCardImageElement(card);
+            const cardEl = createCardImageElement(card, numDecks); // Pass numDecks
             if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
             }
@@ -524,7 +527,8 @@ window.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
-function createCardImageElement(card) {
+    // --- MODIFIED: Added numDecks param for tinting ---
+    function createCardImageElement(card, numDecks) {
         const img = document.createElement('img');
         img.className = 'card-img';
         const suit = SUIT_MAP[card.suit];
@@ -534,16 +538,30 @@ function createCardImageElement(card) {
         img.dataset.id = card.id;
         img.dataset.suit = card.suit;
         img.dataset.rank = card.rank;
+        
+        // --- NEW: Add tint class if it's deck 2 ---
+        const deckIndex = card.id.split('-')[2];
+        if (numDecks == 2 && deckIndex === '1') {
+            img.classList.add('deck-1-tint');
+        }
+        
         return img;
     }
 
-    function createRiverCardImageElement(suit, rank) {
+    // --- MODIFIED: Added deckIndex and numDecks params for tinting ---
+    function createRiverCardImageElement(suit, rank, deckIndex, numDecks) {
         const img = document.createElement('img');
         img.className = 'river-card';
         const suitName = SUIT_MAP[suit];
         const rankName = RANK_MAP[rank];
         img.src = `/assets/cards/${suitName}_${rankName}.svg`;
         img.alt = `${rank} of ${suit}`;
+        
+        // --- NEW: Add tint class if it's deck 2 ---
+        if (numDecks == 2 && deckIndex === '1') {
+            img.classList.add('deck-1-tint');
+        }
+        
         return img;
     }
 
@@ -553,69 +571,100 @@ function createCardImageElement(card) {
         el.textContent = rank;
         return el;
     }
+
+    // --- NEW: Helper for empty grid slots on desktop ---
+    function createEmptyPlaceholder() {
+        const el = document.createElement('div');
+        el.className = 'river-empty-placeholder';
+        return el;
+    }
     
-    // --- VISUAL ENHANCEMENT: New River Logic ---
+    // --- REWRITTEN: New River Logic for Desktop Grid & Mobile Bunching ---
     function renderRiver(boardState, numDecks) {
         const riverContainer = document.getElementById('river-container');
         riverContainer.innerHTML = '';
         
-        const allRanks = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-        const baseSuits = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
         let suitsToRender = [];
-
         if (numDecks == 2) {
             suitsToRender = [
                 'Hearts-0', 'Diamonds-0', 'Clubs-0', 'Spades-0',
                 'Hearts-1', 'Diamonds-1', 'Clubs-1', 'Spades-1'
             ];
         } else {
-            // For 1 deck, we use deck '0'
             suitsToRender = ['Hearts-0', 'Diamonds-0', 'Clubs-0', 'Spades-0'];
         }
+
+        const isMobile = window.innerWidth <= 850;
 
         suitsToRender.forEach(suitKey => {
             const layout = boardState[suitKey];
             const row = document.createElement('div');
             row.className = 'river-row';
 
-            // Parse the suit name (e.g., "Hearts") and deck index ("0")
             const [suitName, deckIndex] = suitKey.split('-');
 
             if (!layout) {
-                 // Suit not started
-                 const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
-                 row.innerHTML = `<div class="river-placeholder">${label}</div>`;
+                 // Suit not started.
+                 if (isMobile) {
+                    const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
+                    row.innerHTML = `<div class="river-placeholder">${label}</div>`;
+                 } else {
+                    // Desktop: Show full grid with 7 placeholder
+                    ALL_RANKS.forEach((rank, i) => {
+                        if (i === 6) { // 6 is index for rank '7'
+                            row.appendChild(createRiverPlaceholder('7'));
+                        } else {
+                            row.appendChild(createEmptyPlaceholder());
+                        }
+                    });
+                 }
             } else {
-                const lowRankVal = layout.low; // e.g., 7
-                const highRankVal = layout.high; // e.g., 7
+                // Suit has started
+                const lowRankVal = layout.low;
+                const highRankVal = layout.high;
 
-                // --- Centering Logic ---
-                if (lowRankVal === 7 && highRankVal === 7) {
-                    // Only the 7 is played, center it with placeholders
-                    row.appendChild(createRiverPlaceholder('6'));
-                    row.appendChild(createRiverCardImageElement(suitName, '7'));
-                    row.appendChild(createRiverPlaceholder('8'));
-                } else {
-                    // Normal row rendering
-                    // 1. Add low placeholder IF low card is not Ace
-                    if (lowRankVal > 1) { // 1 is 'A'
-                        const prevRank = allRanks[lowRankVal - 2];
+                if (isMobile) {
+                    // --- MOBILE PATH: Bunching Logic ---
+                    
+                    // 1. Add low placeholder
+                    if (lowRankVal > 1) {
+                        const prevRank = ALL_RANKS[lowRankVal - 2];
                         row.appendChild(createRiverPlaceholder(prevRank));
                     }
 
                     // 2. Add all played cards
                     for (let r = lowRankVal; r <= highRankVal; r++) {
-                        const rankStr = allRanks[r-1];
+                        const rankStr = ALL_RANKS[r-1];
                         if (rankStr) {
-                            row.appendChild(createRiverCardImageElement(suitName, rankStr));
+                            const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
+                            // Add 'bunched' class if it's a middle card
+                            if (r > lowRankVal && r < highRankVal) {
+                                cardEl.classList.add('bunched');
+                            }
+                            row.appendChild(cardEl);
                         }
                     }
 
-                    // 3. Add high placeholder IF high card is not King
-                    if (highRankVal < 13) { // 13 is 'K'
-                        const nextRank = allRanks[highRankVal];
+                    // 3. Add high placeholder
+                    if (highRankVal < 13) {
+                        const nextRank = ALL_RANKS[highRankVal];
                         row.appendChild(createRiverPlaceholder(nextRank));
                     }
+                } else {
+                    // --- DESKTOP PATH: 13-Column Grid Logic ---
+                    ALL_RANKS.forEach((rankStr, i) => {
+                        const rankVal = i + 1;
+                        if (rankVal >= lowRankVal && rankVal <= highRankVal) {
+                            // Played card
+                            row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks));
+                        } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
+                            // Playable placeholder
+                            row.appendChild(createRiverPlaceholder(rankStr));
+                        } else {
+                            // Empty slot
+                            row.appendChild(createEmptyPlaceholder());
+                        }
+                    });
                 }
             }
             riverContainer.appendChild(row);

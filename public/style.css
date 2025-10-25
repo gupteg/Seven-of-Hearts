@@ -212,6 +212,15 @@ body {
 .card-img.playable-card:hover {
     transform: translateY(-10px) scale(1.05);
 }
+
+/* --- NEW: Deck 2 Tint --- */
+.deck-1-tint {
+    background-color: rgba(255, 230, 0, 0.05);
+    filter: sepia(30%);
+}
+.card-img.deck-1-tint:hover {
+    filter: sepia(0%); /* Remove tint on hover */
+}
 /* --- END: SVG Card Styles --- */
 
 
@@ -232,43 +241,50 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    flex-grow: 1;
+    flex-grow: 1; /* Makes container fill vertical space */
 }
 
-/* --- VISUAL ENHANCEMENT FIX --- */
+/* --- NEW: Desktop Grid Layout --- */
 .river-row {
     background: rgba(0,0,0,0.2);
     border-radius: 8px;
     padding: 10px;
-    display: flex;
+    min-height: 80px; 
+    flex-grow: 1; /* Makes rows fill vertical space */
+    
+    /* NEW: Grid layout for desktop */
+    display: grid;
+    grid-template-columns: repeat(13, 1fr);
     align-items: center;
-    min-height: 80px; /* Reduced height */
-    /* This is the fix: */
-    overflow-x: hidden; /* No horizontal scroll */
-    justify-content: center; /* Center the cards/placeholders */
-    gap: 2px; /* Tighter gap */
+    gap: 4px; 
 }
 .river-card {
-    width: 50px; /* Reduced width */
-    height: 70px; /* Reduced height (1.4 ratio) */
     border-radius: 4px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.3);
     transition: all 0.2s ease;
-    flex-shrink: 0; 
+    flex-shrink: 0;
+    
+    /* NEW: Scalable size for grid */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 100 / 140; /* 70 / 98 */
+    max-width: 70px; /* Max card size */
+    margin: 0 auto; /* Center in grid cell */
+}
+.river-card.deck-1-tint {
+    filter: sepia(30%); /* Tint for river cards */
 }
 
-.river-placeholder {
+.river-placeholder { /* Text for suit name when empty */
     font-size: 1.5em;
     font-weight: bold;
     color: var(--light-text);
     opacity: 0.3;
     text-align: center;
-    width: 100%;
+    grid-column: 1 / 14; /* Span all 13 columns */
 }
 
 .river-card-placeholder {
-    width: 50px; /* Match card size */
-    height: 70px; /* Match card size */
     border-radius: 4px;
     border: 2px dashed var(--gold-accent);
     box-sizing: border-box;
@@ -277,12 +293,31 @@ body {
     justify-content: center;
     color: var(--gold-accent);
     font-family: Arial, sans-serif;
-    font-size: 1.2em; /* Reduced font size */
     font-weight: bold;
     flex-shrink: 0; 
     opacity: 0.6;
+    
+    /* NEW: Scalable size for grid */
+    width: 100%;
+    height: auto;
+    aspect-ratio: 100 / 140;
+    font-size: 1.2vw; /* Scalable font */
+    max-width: 70px; /* Max card size */
+    margin: 0 auto; /* Center in grid cell */
 }
-/* --- END: VISUAL ENHANCEMENT FIX --- */
+
+/* NEW: Empty placeholder for grid */
+.river-empty-placeholder {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 100 / 140;
+    border-radius: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.05);
+    box-sizing: border-box;
+    max-width: 70px;
+    margin: 0 auto;
+}
+/* --- END: Desktop Grid Layout --- */
 
 
 /* --- Modal Styles --- */
@@ -371,7 +406,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 /* --- END: Buttons --- */
 
 
-/* --- *** NEW: Scoreboard Table Styles *** --- */
+/* --- Scoreboard Table Styles --- */
 #round-over-scoreboard table {
     width: 100%;
     border-collapse: collapse;
@@ -394,7 +429,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     text-align: right;
     font-weight: bold;
 }
-/* --- *** END: Scoreboard Table Styles *** --- */
+/* --- END: Scoreboard Table Styles --- */
 
 
 /* --- Mobile Responsive Styles --- */
@@ -461,15 +496,43 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
         width: 80px;
         height: 112px;
     }
+
+    /* --- NEW: Mobile River Overrides --- */
+    .river-row {
+        display: flex; /* Override grid */
+        grid-template-columns: unset;
+        justify-content: center; /* Center the bunched cards */
+        overflow-x: hidden; /* Hide overflow */
+        min-height: 110px; /* Taller for bigger cards */
+    }
     .river-card {
-        width: 50px;
-        height: 70px;
+        width: 70px; /* INCREASED card size */
+        height: 98px;
+        aspect-ratio: unset;
+        max-width: none; /* Remove max-width */
     }
-    .river-row { min-height: 80px; }
     .river-card-placeholder {
-        width: 50px;
-        height: 70px;
-        font-size: 1em;
+        width: 70px; /* INCREASED card size */
+        height: 98px;
+        font-size: 1.2em; /* Fixed font size */
+        aspect-ratio: unset;
+        max-width: none;
     }
+    .river-empty-placeholder {
+        display: none; /* Hide empty slots on mobile */
+    }
+    
+    /* NEW: Bunching Logic */
+    .river-card.bunched {
+        margin-left: -55px; /* (70px card width - 15px visible) */
+        z-index: 1;
+        transition: all 0.2s ease;
+    }
+    .river-card.bunched:hover {
+        z-index: 10;
+        transform: scale(1.1) translateY(-5px);
+        margin-right: 5px; /* Give space on hover */
+    }
+    /* --- END: Mobile River Overrides --- */
 }
 /* --- END: Mobile --- */
