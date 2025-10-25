@@ -69,34 +69,63 @@ function getNextPlayerId(currentPlayerId) {
     return availablePlayers[nextIndex].playerId;
 }
 
-function checkValidMove(card, boardState, hand, isFirstMove) {
+// *** MODIFIED: Added fungible logic ***
+function checkValidMove(card, boardState, hand, isFirstMove, deckMode) {
     if (isFirstMove) {
         return card.id === '7-Hearts-0';
     }
 
     const deckIndex = card.id.split('-')[2];
-    const suitKey = `${card.suit}-${deckIndex}`;
+    const cardRankVal = RANK_ORDER[card.rank];
+    const suit = card.suit;
 
     if (card.rank === '7') {
-        return !boardState[suitKey];
+        if (deckMode === 'fungible') {
+            // Valid if NEITHER river for this suit exists
+            const suitKey0 = `${suit}-0`;
+            const suitKey1 = `${suit}-1`;
+            return !boardState[suitKey0] && !boardState[suitKey1];
+        } else {
+            // Original logic: valid if THIS river doesn't exist
+            const suitKey = `${suit}-${deckIndex}`;
+            return !boardState[suitKey];
+        }
     }
 
-    const suitLayout = boardState[suitKey];
-    if (suitLayout) {
-        const cardRankVal = RANK_ORDER[card.rank];
-        if (cardRankVal === suitLayout.high + 1) return true;
-        if (cardRankVal === suitLayout.low - 1) return true;
-    }
+    // Check non-'7' cards
+    if (deckMode === 'fungible') {
+        // Check against BOTH rivers for this suit
+        const suitKey0 = `${suit}-0`;
+        const suitKey1 = `${suit}-1`;
+        const layout0 = boardState[suitKey0];
+        const layout1 = boardState[suitKey1];
 
-    return false;
+        if (layout0 && (cardRankVal === layout0.high + 1 || cardRankVal === layout0.low - 1)) {
+            return true;
+        }
+        if (layout1 && (cardRankVal === layout1.high + 1 || cardRankVal === layout1.low - 1)) {
+            return true;
+        }
+        return false; // Not playable on either river
+    } else {
+        // Original logic: check only the specific river
+        const suitKey = `${suit}-${deckIndex}`;
+        const suitLayout = boardState[suitKey];
+        if (suitLayout) {
+            if (cardRankVal === suitLayout.high + 1) return true;
+            if (cardRankVal === suitLayout.low - 1) return true;
+        }
+        return false;
+    }
 }
 
-function checkHandForValidMoves(hand, boardState, isFirstMove) {
+// *** MODIFIED: Pass deckMode to checkValidMove ***
+function checkHandForValidMoves(hand, boardState, isFirstMove, deckMode) {
     if (isFirstMove) {
         return hand.some(card => card.id === '7-Hearts-0');
     }
     for (const card of hand) {
-        if (checkValidMove(card, boardState, hand, false)) {
+        if (checkValidMove(card, boardState, hand, false, deckMode)) { // Pass deckMode
             return true;
         }
     }
@@ -125,12 +154,22 @@ function initializeGame(readyPlayers, settings) {
     const otherPlayers = gamePlayers.filter(p => !p.isHost);
     const dealerOrder = [host.playerId, ...otherPlayers.map(p => p.playerId)];
 
+    // Determine deckCount based on deckMode
+    let deckCount = 1;
+    if (settings.deckMode === 'double' || settings.deckMode === 'fungible') {
+        deckCount = 2;
+    }
+
     gameState = {
         players: gamePlayers,
         boardState: {},
         currentPlayerId: null,
         logHistory: ['Game initialized.'],
-        settings: settings,
+        settings: { // Store the mode
+            deckMode: settings.deckMode,
+            deckCount: deckCount, // Also store count for convenience
+            winCondition: settings.winCondition
+        },
         isPaused: false,
         pausedForPlayerNames: [],
         pauseEndTime: null,
@@ -172,6 +211,7 @@ function startNewRound() {
     gameState.players.forEach(p => p.hand = []);
     gameState.isBetweenRounds = false; // NEW: Set flag to false
 
+    // Use stored deckCount
     let deck = createDeck(gameState.settings.deckCount);
     deck = shuffleDeck(deck);
 
@@ -333,18 +373,20 @@ function endSession(wasGameAborted = false) {
 }
 
 
+// *** MODIFIED: Pass deckMode to bot's checkValidMove ***
 function checkAndRunNextBotTurn() {
     if (!gameState) return;
     const nextPlayer = gameState.players.find(p => p.playerId === gameState.currentPlayerId);
 
     if (nextPlayer && nextPlayer.isBot === true) {
 
-        setTimeout(() => runBotTurn(nextPlayer), 1500);
+        setTimeout(() => runBotTurn(nextPlayer, gameState.settings.deckMode), 1500); // Pass deckMode
     }
 }
 
 
-function runBotTurn(botPlayer) {
+// *** MODIFIED: Accept deckMode, pass to checkValidMove ***
+function runBotTurn(botPlayer, deckMode) {
     if (!gameState || !botPlayer || botPlayer.isBot !== true || botPlayer.hand.length === 0) {
         return;
     }
@@ -353,9 +395,9 @@ function runBotTurn(botPlayer) {
     if (gameState.isFirstMove) {
         cardToPlay = botPlayer.hand.find(c => c.id === '7-Hearts-0');
     } else {
-        // Simple bot: find the first playable card
+        // Simple bot: find the first playable card using the correct mode's logic
         for (const card of botPlayer.hand) {
-            if (checkValidMove(card, gameState.boardState, botPlayer.hand, false)) {
+            if (checkValidMove(card, gameState.boardState, botPlayer.hand, false, deckMode)) { // Pass deckMode
                 cardToPlay = card;
                 break;
             }
@@ -370,6 +412,7 @@ function runBotTurn(botPlayer) {
         const deckIndex = cardToPlay.id.split('-')[2];
         const suitKey = `${cardToPlay.suit}-${deckIndex}`;
 
+        // Card placement logic remains the same (goes onto its own deck's river)
         if (!gameState.boardState[suitKey]) {
             gameState.boardState[suitKey] = { low: 7, high: 7 };
         } else if (cardRankVal > 7) {
@@ -407,7 +450,7 @@ function runBotTurn(botPlayer) {
         }
     } else {
         io.emit('updateGameState', gameState);
-        checkAndRunNextBotTurn();
+        checkAndRunNextBotTurn(); // Already passes deckMode via initial call
     }
 }
 
@@ -462,7 +505,7 @@ function handlePlayerRemoval(playerId) {
 
 
         if (gameState.currentPlayerId === playerId) {
-            runBotTurn(playerToRemove);
+            runBotTurn(playerToRemove, gameState.settings.deckMode); // Pass deckMode
         }
     }
 }
@@ -618,6 +661,7 @@ io.on('connection', (socket) => {
     });
 
     // --- Seven of Hearts Game Events ---
+    // *** MODIFIED: Pass deckMode to checkValidMove ***
     socket.on('playCard', (card) => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
@@ -634,7 +678,8 @@ io.on('connection', (socket) => {
 
             const cardToPlay = player.hand[cardInHandIndex];
 
-            const isValid = checkValidMove(cardToPlay, gameState.boardState, player.hand, gameState.isFirstMove);
+            // Pass deckMode to validation
+            const isValid = checkValidMove(cardToPlay, gameState.boardState, player.hand, gameState.isFirstMove, gameState.settings.deckMode);
 
             if (isValid) {
                 player.hand.splice(cardInHandIndex, 1);
@@ -643,6 +688,7 @@ io.on('connection', (socket) => {
                 const deckIndex = cardToPlay.id.split('-')[2];
                 const suitKey = `${cardToPlay.suit}-${deckIndex}`;
 
+                // Placement logic remains the same
                 if (!gameState.boardState[suitKey]) {
                     gameState.boardState[suitKey] = { low: 7, high: 7 };
                 } else if (cardRankVal > 7) {
@@ -664,7 +710,7 @@ io.on('connection', (socket) => {
 
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn();
+                checkAndRunNextBotTurn(); // Already passes deckMode via initial call
 
             } else {
                 socket.emit('warning', { title: 'Invalid Move', message: 'That is not a valid move.' });
@@ -672,6 +718,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // *** MODIFIED: Pass deckMode to checkHandForValidMoves ***
     socket.on('passTurn', () => {
         if (!gameState || gameState.isPaused) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
@@ -680,7 +727,8 @@ io.on('connection', (socket) => {
 
         if (player && player.playerId === gameState.currentPlayerId) {
 
-            const hasValidMove = checkHandForValidMoves(player.hand, gameState.boardState, gameState.isFirstMove);
+            // Pass deckMode to validation
+            const hasValidMove = checkHandForValidMoves(player.hand, gameState.boardState, gameState.isFirstMove, gameState.settings.deckMode);
 
             if (hasValidMove) {
                 socket.emit('warning', { title: 'Invalid Pass', message: 'You cannot pass, you have a valid move.' });
@@ -688,7 +736,7 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} passed.`);
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
-                checkAndRunNextBotTurn();
+                checkAndRunNextBotTurn(); // Already passes deckMode via initial call
             }
         }
     });
