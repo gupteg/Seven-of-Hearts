@@ -257,7 +257,8 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('waiting-for-host-modal').classList.add('hidden');
 
-        console.log('Received GameState:', gs);
+        // console.log('Received GameState:', gs); // KEEP ORIGINAL LOG
+        console.log('CLIENT: Received updateGameState:', JSON.stringify(gs.boardState)); // DETAILED BOARD STATE LOG
 
         // *** NEW: Handle Move Announcement ***
         handleMoveAnnouncement(gs, previousGameState);
@@ -841,6 +842,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     for (let r = lowRankVal; r <= highRankVal; r++) {
                         const rankStr = ALL_RANKS[r-1];
                         if (rankStr) {
+                            // *** ADDED REFINED LOGGING ***
+                            console.log(`CLIENT DEBUG: About to create image. Suit: ${suitName}, Rank: ${rankStr}, DeckIndex: ${deckIndex}`);
+                            // *** END REFINED LOGGING ***
                             const cardEl = createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks);
 
                             // MODIFIED: Stack all cards after the first one
@@ -861,7 +865,9 @@ window.addEventListener('DOMContentLoaded', () => {
                     ALL_RANKS.forEach((rankStr, i) => {
                         const rankVal = i + 1;
                         if (rankVal >= lowRankVal && rankVal <= highRankVal) {
-
+                            // *** ADDED REFINED LOGGING ***
+                            console.log(`CLIENT DEBUG: About to create image. Suit: ${suitName}, Rank: ${rankStr}, DeckIndex: ${deckIndex}`);
+                            // *** END REFINED LOGGING ***
                             row.appendChild(createRiverCardImageElement(suitName, rankStr, deckIndex, numDecks));
                         } else if (rankVal === lowRankVal - 1 || rankVal === highRankVal + 1) {
 
