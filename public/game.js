@@ -49,10 +49,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('start-game-btn').addEventListener('click', () => {
             const hostPassword = document.getElementById('host-password-input').value;
             const deckCount = document.querySelector('input[name="deck-count"]:checked').value;
-            const winCondition = document.querySelector('input[name="win-condition"]:checked').value;
+            // Win condition removed
             socket.emit('startGame', { 
                 hostPassword,
-                settings: { deckCount: parseInt(deckCount, 10), winCondition: winCondition }
+                settings: { deckCount: parseInt(deckCount, 10), winCondition: "first_out" } // Send dummy winCondition
             });
         });
         document.getElementById('end-session-btn').addEventListener('click', () => {
@@ -68,6 +68,10 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('show-logs-btn').addEventListener('click', () => {
             renderLogModal(window.gameState.logHistory || []);
             logModal.classList.remove('hidden');
+        });
+        // In-Game "End Game" button
+        document.getElementById('in-game-end-btn').addEventListener('click', () => {
+            document.getElementById('confirm-end-game-modal').classList.remove('hidden');
         });
         document.getElementById('game-log-modal-close').addEventListener('click', () => {
             logModal.classList.add('hidden');
@@ -108,6 +112,16 @@ window.addEventListener('DOMContentLoaded', () => {
         });
         document.getElementById('pass-btn').addEventListener('click', () => {
             socket.emit('passTurn');
+        });
+
+        // *** NEW: Round Over Modal Listeners ***
+        document.getElementById('round-over-ok-btn').addEventListener('click', () => {
+            document.getElementById('round-over-modal').classList.add('hidden');
+            document.getElementById('waiting-for-host-modal').classList.remove('hidden');
+        });
+        document.getElementById('start-next-round-btn').addEventListener('click', () => {
+            socket.emit('requestNextRound');
+            document.getElementById('round-over-modal').classList.add('hidden');
         });
     }
 
@@ -199,6 +213,10 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     
     socket.on('updateGameState', (gs) => {
+        // *** NEW: Hide round-over and waiting modals on new round start ***
+        document.getElementById('round-over-modal').classList.add('hidden');
+        document.getElementById('waiting-for-host-modal').classList.add('hidden');
+
         console.log('Received GameState:', gs);
         window.gameState = gs;
         
@@ -212,9 +230,10 @@ window.addEventListener('DOMContentLoaded', () => {
         renderMyInfo(me);
         renderMyHand(me, gs);
         renderMyActions(me, gs);
-        renderOtherPlayers(gs.players, me, gs.currentPlayerId);
+        renderOtherPlayers(gs.players, me, gs.currentPlayerId, gs.dealerId);
         renderGameStatusBanner(gs, me);
         renderRiver(gs.boardState, gs.settings.deckCount);
+        renderScoreboard(gs.players); // Keep scoreboard modal up-to-date
 
         if (isInitialGameRender) {
             const mobileScroll = document.getElementById('mobile-scroll-container');
@@ -223,6 +242,11 @@ window.addEventListener('DOMContentLoaded', () => {
             }
             isInitialGameRender = false;
         }
+    });
+
+    // *** NEW: Round Over listener ***
+    socket.on('roundOver', (data) => {
+        renderRoundOverModal(data);
     });
     
     socket.on('gameEnded', ({ logHistory }) => {
@@ -301,13 +325,70 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('game-over-title').textContent = 'Game Over!';
         document.getElementById('game-over-winner-text').textContent = 'The game has concluded.';
         const scoreboardContent = document.getElementById('scoreboard-content').innerHTML;
-        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent;
+        document.getElementById('game-over-scoreboard').innerHTML = scoreboardContent; // Show final scoreboard
         document.getElementById('game-over-modal').classList.remove('hidden');
     }
 
+    // *** NEW: Render Round Over Modal ***
+    function renderRoundOverModal(data) {
+        const { scoreboard, winnerName, roundNumber } = data;
+        const me = window.gameState.players.find(p => p.playerId === myPersistentPlayerId);
+
+        document.getElementById('round-over-title').textContent = `Round ${roundNumber} Complete!`;
+        document.getElementById('round-over-winner-text').textContent = `🎉 ${winnerName} won the round! 🎉`;
+        
+        renderRoundScoreboardTable(scoreboard);
+
+        if (me && me.isHost) {
+            document.getElementById('start-next-round-btn').style.display = 'block';
+            document.getElementById('round-over-ok-btn').style.display = 'none';
+        } else {
+            document.getElementById('start-next-round-btn').style.display = 'none';
+            document.getElementById('round-over-ok-btn').style.display = 'block';
+        }
+        document.getElementById('round-over-modal').classList.remove('hidden');
+    }
+
+    // *** NEW: Helper to build scoreboard table ***
+    function renderRoundScoreboardTable(scoreboardData) {
+        const container = document.getElementById('round-over-scoreboard');
+        let table = '<table>';
+        table += '<tr><th>Player</th><th class="score-col">Round Score</th><th class="score-col">Total Score</th></tr>';
+        
+        scoreboardData.forEach(player => {
+            table += `<tr>
+                <td>${player.name}</td>
+                <td class="score-col">${player.roundScore}</td>
+                <td class="score-col">${player.cumulativeScore}</td>
+            </tr>`;
+        });
+        
+        table += '</table>';
+        container.innerHTML = table;
+    }
+
     function renderScoreboard(players) {
+        // This renders the "Scoreboard" modal content, which is separate from the round-over modal
         const scoreboard = document.getElementById('scoreboard-content');
-        scoreboard.innerHTML = '<p>Scoring logic not yet implemented.</p>';
+        if (!players || players.length === 0) {
+             scoreboard.innerHTML = '<p>No players in game.</p>';
+             return;
+        }
+        
+        let table = '<table>';
+        table += '<tr><th>Player</th><th class="score-col">Total Score</th></tr>';
+        
+        const sortedPlayers = [...players].sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        sortedPlayers.forEach(player => {
+            table += `<tr>
+                <td>${player.name} ${player.isHost ? '👑' : ''}</td>
+                <td class="score-col">${player.score || 0}</td>
+            </tr>`;
+        });
+        
+        table += '</table>';
+        scoreboard.innerHTML = table;
     }
 
     function renderMyInfo(me) {
@@ -333,7 +414,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
         sortedHand.forEach(card => {
             const cardEl = createCardImageElement(card);
-            if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId) {
+            if (validMoveIds.has(card.id) && me.playerId === gs.currentPlayerId && !gs.isPaused) {
                 cardEl.classList.add('playable-card');
             }
             handContainer.appendChild(cardEl);
@@ -342,6 +423,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     function renderMyActions(me, gs) {
         const passBtn = document.getElementById('pass-btn');
+        const endBtn = document.getElementById('in-game-end-btn');
+
         if (me.playerId === gs.currentPlayerId && !gs.isPaused) {
             passBtn.style.display = 'block';
             const validMoves = getValidMoves(me.hand, gs.boardState, gs.isFirstMove);
@@ -349,9 +432,12 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
             passBtn.style.display = 'none';
         }
+
+        // Show "End Game" button for host if game is active
+        endBtn.style.display = (me.isHost && !gs.isPaused) ? 'block' : 'none';
     }
 
-    function renderOtherPlayers(players, me, currentPlayerId) {
+    function renderOtherPlayers(players, me, currentPlayerId, dealerId) {
         const container = document.getElementById('other-players-container');
         container.innerHTML = '';
         
@@ -371,12 +457,15 @@ window.addEventListener('DOMContentLoaded', () => {
             if (me.isHost && player.status === 'Active') {
                 afkButton = `<button class="afk-btn danger-btn" data-player-id="${player.playerId}">AFK?</button>`;
             }
+            
+            let dealerIcon = (player.playerId === dealerId) ? ' (Dealer)' : '';
 
             tile.innerHTML = `
                 <div class="other-player-name">${player.name} ${player.isHost ? '👑' : ''} ${status}</div>
                 <div class="other-player-details">
                     <div>Score: ${player.score || 0}</div>
                     <div>Cards: ${player.hand ? player.hand.length : 0}</div>
+                    <div>${dealerIcon}</div>
                 </div>
                 ${afkButton}
             `;
@@ -399,16 +488,17 @@ window.addEventListener('DOMContentLoaded', () => {
         }
 
         const latestLog = gs.logHistory[0] || "Game Started.";
+        const roundText = `(Round ${gs.currentRound || 1})`;
         
         if (currentPlayer.playerId === me.playerId) {
-            banner.textContent = `YOUR TURN. (${latestLog})`;
+            banner.textContent = `YOUR TURN. ${roundText} (${latestLog})`;
             if (gs.isFirstMove && !me.hand.find(c => c.id === '7-Hearts-0')) { // Must be 7 of hearts from first deck
                  showWarning("Your Turn", "You do not have the 7 of Hearts. You must pass.");
             } else if (gs.isFirstMove) {
                  showWarning("Your Turn", "You must play the 7 of Hearts to begin.");
             }
         } else {
-            banner.textContent = `Waiting for ${currentPlayer.name}... (${latestLog})`;
+            banner.textContent = `Waiting for ${currentPlayer.name}... ${roundText} (${latestLog})`;
         }
     }
     
@@ -434,7 +524,7 @@ window.addEventListener('DOMContentLoaded', () => {
         content.innerHTML = logHistory.map(entry => `<div>${entry}</div>`).join('');
     }
 
-    function createCardImageElement(card) {
+function createCardImageElement(card) {
         const img = document.createElement('img');
         img.className = 'card-img';
         const suit = SUIT_MAP[card.suit];

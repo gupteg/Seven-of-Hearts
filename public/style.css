@@ -126,6 +126,7 @@ body {
 /* Action Buttons */
 #my-actions-panel {
     display: flex;
+    flex-wrap: wrap; /* Added for better mobile wrapping */
     gap: 10px;
     justify-content: center;
     flex-shrink: 0; 
@@ -148,6 +149,9 @@ body {
 .action-btn:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opacity: 0.7; }
 .action-btn.secondary-btn { background-color: var(--teak-light); color: var(--light-text); }
 .action-btn.secondary-btn:hover:not(:disabled) { background-color: var(--teak-dark); }
+.action-btn.danger-btn { background-color: var(--busted-red); color: white; } /* Added for End Game */
+.action-btn.danger-btn:hover:not(:disabled) { background-color: #e04462; } /* Added for End Game */
+
 
 /* Wrappable Other Players Container */
 #other-players-container {
@@ -365,6 +369,32 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 .confirm-btn { background-color: #28a745; color: white; }
 .confirm-btn:hover { background-color: #218838; }
 /* --- END: Buttons --- */
+
+
+/* --- *** NEW: Scoreboard Table Styles *** --- */
+#round-over-scoreboard table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+#round-over-scoreboard th,
+#round-over-scoreboard td {
+    padding: 8px 12px;
+    border: 1px solid var(--teak-light);
+    text-align: left;
+}
+#round-over-scoreboard th {
+    background-color: var(--teak-light);
+    color: var(--light-text);
+}
+#round-over-scoreboard tr:nth-child(even) {
+    background-color: rgba(0,0,0,0.05);
+}
+#round-over-scoreboard .score-col {
+    text-align: right;
+    font-weight: bold;
+}
+/* --- *** END: Scoreboard Table Styles *** --- */
 
 
 /* --- Mobile Responsive Styles --- */

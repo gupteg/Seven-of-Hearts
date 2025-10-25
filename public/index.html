@@ -33,14 +33,7 @@
                     <input type="radio" id="deck-2" name="deck-count" value="2">
                     <label for="deck-2">2 Decks</label>
                 </div>
-                <div class="setting-group">
-                    <label>Win Condition:</label>
-                    <input type="radio"id="win-first-out" name="win-condition" value="first_out" checked>
-                    <label for="win-first-out">First Out</label>
-                    <input type="radio" id="win-points" name="win-condition" value="points_100">
-                    <label for="win-points">100 Points</label>
                 </div>
-            </div>
             <div id="host-controls">
                 <input type="password" id="host-password-input" placeholder="Host Password">
                 <button id="start-game-btn">Start Game</button>
@@ -51,6 +44,7 @@
 
         <p id="host-message" style="display: none;">(Waiting for the host to start the game)</p>
     </div>
+
     <div id="game-board" style="display: none;">
         
         <div id="mobile-scroll-container">
@@ -72,7 +66,8 @@
                 <div id="my-actions-panel">
                     <button id="pass-btn" class="action-btn" style="display: none;">PASS</button>
                     <button id="show-logs-btn" class="action-btn secondary-btn">Show Logs</button>
-                    </div>
+                    <button id="in-game-end-btn" class="action-btn danger-btn" style="display: none;">End Game</button>
+                </div>
 
                 <div class="panel-header"><h4>Other Players</h4></div>
                 <div id="other-players-container">
@@ -90,6 +85,7 @@
             </div> </div> <div id="page-indicator"></div>
 
     </div>
+
     <div id="game-log-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -175,6 +171,30 @@
             <div class="modal-actions">
                 <button id="warning-modal-ok-btn">OK</button>
             </div>
+        </div>
+    </div>
+
+    <div id="round-over-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="round-over-title">Round Over!</h2>
+            </div>
+            <p id="round-over-winner-text"></p>
+            <div class="modal-scrollable-content" id="round-over-scoreboard">
+                </div>
+            <div class="modal-actions">
+                <button id="round-over-ok-btn" class="confirm-btn">OK</button>
+                <button id="start-next-round-btn" class="confirm-btn" style="display: none;">Start Next Round</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="waiting-for-host-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Please Wait</h2>
+            </div>
+            <p>Please wait for the host to start the next round.</p>
         </div>
     </div>
     
