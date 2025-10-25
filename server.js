@@ -36,8 +36,6 @@ function createDeck(deckCount) {
     for (let i = 0; i < deckCount; i++) {
         for (const suit of SUITS) {
             for (const rank of RANKS) {
-                // --- BUG FIX: Card ID now includes suit for easier parsing ---
-                // Example: 7-Hearts-0
                 decks.push({ suit, rank, id: `${rank}-${suit}-${i}` });
             }
         }
@@ -56,34 +54,32 @@ function shuffleDeck(deck) {
 
 // --- Game Helper Functions ---
 function getNextPlayerId(currentPlayerId) {
-    const activePlayers = gameState.players.filter(p => p.status === 'Active');
-    if (activePlayers.length === 0) return null;
+    // *** MODIFIED: Bot can be "next player" if it still has cards ***
+    const availablePlayers = gameState.players.filter(p => p.status === 'Active' || (p.isBot === true && p.hand.length > 0));
     
-    const currentIndex = activePlayers.findIndex(p => p.playerId === currentPlayerId);
+    if (availablePlayers.length === 0) return null; // No one left to play
+    
+    const currentIndex = availablePlayers.findIndex(p => p.playerId === currentPlayerId);
     if (currentIndex === -1) {
-        return activePlayers[0].playerId;
+        return availablePlayers[0].playerId;
     }
     
-    const nextIndex = (currentIndex + 1) % activePlayers.length;
-    return activePlayers[nextIndex].playerId;
+    const nextIndex = (currentIndex + 1) % availablePlayers.length;
+    return availablePlayers[nextIndex].playerId;
 }
 
-// --- BUG FIX: Updated to use suitKey for 2-deck logic ---
 function checkValidMove(card, boardState, hand, isFirstMove) {
     if (isFirstMove) {
-        // First move must be 7 of Hearts from deck 0
         return card.id === '7-Hearts-0';
     }
 
     const deckIndex = card.id.split('-')[2];
     const suitKey = `${card.suit}-${deckIndex}`;
 
-    // Rule 1: Can play a 7 ONLY if that suit's layout hasn't been started.
     if (card.rank === '7') {
         return !boardState[suitKey];
     }
 
-    // Rule 2: Can build on an existing layout
     const suitLayout = boardState[suitKey];
     if (suitLayout) {
         const cardRankVal = RANK_ORDER[card.rank];
@@ -94,10 +90,8 @@ function checkValidMove(card, boardState, hand, isFirstMove) {
     return false;
 }
 
-// --- BUG FIX: Updated to use suitKey for 2-deck logic ---
 function checkHandForValidMoves(hand, boardState, isFirstMove) {
     if (isFirstMove) {
-        // Must play 7 of Hearts from deck 0
         return hand.some(card => card.id === '7-Hearts-0');
     }
     for (const card of hand) {
@@ -112,10 +106,6 @@ function checkHandForValidMoves(hand, boardState, isFirstMove) {
 
 // --- Core Game Logic ---
 
-/**
- * Initializes the persistent Game state, separate from any single round.
- * This sets up players, scores, and dealer order.
- */
 function initializeGame(readyPlayers, settings) {
     addLog('Initializing new game of Seven of Hearts...');
     
@@ -126,53 +116,58 @@ function initializeGame(readyPlayers, settings) {
         isHost: p.isHost,
         status: 'Active',
         hand: [],
-        score: 0, // Cumulative score starts at 0
+        score: 0, 
+        isBot: false, // NEW: Bot flag
     }));
 
-    // Host is first in dealer order, then by join order (which readyPlayers is)
     const host = gamePlayers.find(p => p.isHost);
     const otherPlayers = gamePlayers.filter(p => !p.isHost);
     const dealerOrder = [host.playerId, ...otherPlayers.map(p => p.playerId)];
 
     gameState = {
         players: gamePlayers,
-        boardState: {}, // Empty board
-        currentPlayerId: null, // Will be set by startNewRound
+        boardState: {}, 
+        currentPlayerId: null, 
         logHistory: ['Game initialized.'],
         settings: settings,
         isPaused: false,
         pausedForPlayerNames: [],
         pauseEndTime: null,
         isFirstMove: true,
-        // --- NEW Multi-Round State ---
-        currentRound: 0, // Will be incremented to 1 by startNewRound
+        currentRound: 0, 
         dealerOrder: dealerOrder,
-        currentDealerIndex: -1, // Will be incremented to 0 by startNewRound
-        dealerId: null, // Will be set by startNewRound
+        currentDealerIndex: -1, 
+        dealerId: null, 
     };
     
     io.emit('gameStarted');
-    
-    // Start the first round
     startNewRound();
 }
 
-/**
- * Starts a new round, (re)deals cards, and finds the starting player.
- */
 function startNewRound() {
     if (!gameState) return;
+
+    // *** NEW: Purge bots before starting the new round ***
+    const activePlayerIds = new Set(gameState.players.filter(p => p.isBot !== true).map(p => p.playerId));
+    gameState.players = gameState.players.filter(p => activePlayerIds.has(p.playerId));
+    gameState.dealerOrder = gameState.dealerOrder.filter(playerId => activePlayerIds.has(playerId));
+
+    // Check if enough players are left to continue
+    if (gameState.players.length < 2) {
+        addLog('Not enough players to start a new round. Ending game.');
+        endSession(true); // Abort the game
+        return;
+    }
 
     gameState.currentRound++;
     gameState.currentDealerIndex = (gameState.currentDealerIndex + 1) % gameState.dealerOrder.length;
     const dealerId = gameState.dealerOrder[gameState.currentDealerIndex];
     const dealer = gameState.players.find(p => p.playerId === dealerId);
     
-    // Reset round-specific state
     gameState.boardState = {};
     gameState.isFirstMove = true;
-    gameState.logHistory = []; // Clear log for new round
-    gameState.players.forEach(p => p.hand = []); // Empty hands
+    gameState.logHistory = []; 
+    gameState.players.forEach(p => p.hand = []); 
 
     let deck = createDeck(gameState.settings.deckCount);
     deck = shuffleDeck(deck);
@@ -183,7 +178,6 @@ function startNewRound() {
         playerIndex = (playerIndex + 1) % gameState.players.length;
     }
 
-    // Find player with 7 of Hearts (Deck 0)
     let firstPlayerId = null;
     let firstPlayerName = null;
     for (const player of gameState.players) {
@@ -195,7 +189,6 @@ function startNewRound() {
     }
     
     if (!firstPlayerId) {
-        // Fallback (shouldn't happen if 7-Hearts-0 is in deck)
         firstPlayerId = gameState.players[0].playerId;
         firstPlayerName = gameState.players[0].name;
     }
@@ -207,52 +200,50 @@ function startNewRound() {
     addLog(`Waiting for ${firstPlayerName} to play the 7 of Hearts.`);
     
     io.emit('updateGameState', gameState);
+    checkAndRunNextBotTurn(); // Check if the first player is a bot
 }
 
-/**
- * Ends the current round, calculates scores, and emits results.
- */
 function endRound(winner) {
     if (!gameState) return;
 
-    addLog(`🎉 ${winner.name} has won Round ${gameState.currentRound}! 🎉`);
+    // *** MODIFIED: Handle null winner (e.g. all bots) ***
+    const winnerName = winner ? winner.name : "No one";
+    addLog(`🎉 ${winnerName} has won Round ${gameState.currentRound}! 🎉`);
 
     let scoreboard = [];
 
     gameState.players.forEach(p => {
         let roundScore = 0;
-        if (p.playerId !== winner.playerId) {
-            // Calculate score for cards left in hand
+        // Score is calculated for everyone *except* the winner (if one exists)
+        if (!winner || p.playerId !== winner.playerId) {
             for (const card of p.hand) {
                 roundScore += RANK_ORDER[card.rank];
             }
         }
-        p.score += roundScore; // Add to cumulative score
+        
+        // Don't add score to bots, they are already removed
+        if (p.isBot !== true) {
+             p.score += roundScore; 
+        }
         
         scoreboard.push({
-            name: p.name,
+            name: p.name + (p.isBot ? ' [Bot]' : ''),
             roundScore: roundScore,
             cumulativeScore: p.score
         });
     });
 
-    // Sort by cumulative score, highest first
     scoreboard.sort((a, b) => b.cumulativeScore - a.cumulativeScore);
 
-    // Emit results to all players
     io.emit('roundOver', {
         scoreboard: scoreboard,
-        winnerName: winner.name,
+        winnerName: winnerName,
         roundNumber: gameState.currentRound
     });
 }
 
-/**
- * Ends the *entire game session* for all players and returns them to the lobby.
- */
 function endSession(wasGameAborted = false) {
     if (!gameState) {
-        // Case: Host ends session from the LOBBY
         const host = players.find(p => p.isHost);
         if (host) {
              players.forEach(p => {
@@ -260,29 +251,26 @@ function endSession(wasGameAborted = false) {
                     io.to(p.socketId).emit('forceDisconnect');
                 }
              });
-             players = [host]; // Only host remains
+             players = [host]; 
              io.emit('lobbyUpdate', players);
         }
         return;
     }
 
-    // Case: Host ends session from IN-GAME, or game is aborted (e.g., players left)
     addLog('The game session has ended.');
     io.emit('gameEnded', { logHistory: gameState.logHistory });
 
-    // Rebuild the lobby 'players' array from the 'gameState.players'
     players = gameState.players
-        .filter(p => p.status !== 'Removed')
+        .filter(p => p.status !== 'Removed') // Bots will have status 'Removed'
         .map(p => ({
             playerId: p.playerId,
-            socketId: p.socketId, // Note: socketId might be old for disconnected players
+            socketId: p.socketId, 
             name: p.name,
             isHost: p.isHost,
-            isReady: p.isHost, // Host is auto-ready, others are not
-            active: p.status === 'Active' // Only currently active players are 'active' in lobby
+            isReady: p.isHost, 
+            active: p.status === 'Active' 
         }));
     
-    // Find the current socketId for any active players to update the lobby list
     players.forEach(p => {
         if (p.active) {
             const gamePlayer = gameState.players.find(gp => gp.playerId === p.playerId);
@@ -292,38 +280,116 @@ function endSession(wasGameAborted = false) {
 
     io.emit('lobbyUpdate', players);
 
-    // Clean up game state
     gameState = null;
     Object.keys(reconnectTimers).forEach(key => clearTimeout(reconnectTimers[key]));
     if (gameOverCleanupTimer) clearTimeout(gameOverCleanupTimer);
 }
 
+// *** NEW: Bot Helper Function ***
+function checkAndRunNextBotTurn() {
+    if (!gameState) return;
+    const nextPlayer = gameState.players.find(p => p.playerId === gameState.currentPlayerId);
+    
+    if (nextPlayer && nextPlayer.isBot === true) {
+        // Wait 1.5s before bot plays
+        setTimeout(() => runBotTurn(nextPlayer), 1500);
+    }
+}
+
+// *** NEW: Bot Turn Logic ***
+function runBotTurn(botPlayer) {
+    if (!gameState || !botPlayer || botPlayer.isBot !== true || botPlayer.hand.length === 0) {
+        return;
+    }
+
+    let cardToPlay = null;
+    if (gameState.isFirstMove) {
+        cardToPlay = botPlayer.hand.find(c => c.id === '7-Hearts-0');
+    } else {
+        for (const card of botPlayer.hand) {
+            if (checkValidMove(card, gameState.boardState, botPlayer.hand, false)) {
+                cardToPlay = card;
+                break;
+            }
+        }
+    }
+
+    if (cardToPlay) {
+        const cardInHandIndex = botPlayer.hand.findIndex(c => c.id === cardToPlay.id);
+        botPlayer.hand.splice(cardInHandIndex, 1);
+        
+        const cardRankVal = RANK_ORDER[cardToPlay.rank];
+        const deckIndex = cardToPlay.id.split('-')[2];
+        const suitKey = `${cardToPlay.suit}-${deckIndex}`;
+
+        if (!gameState.boardState[suitKey]) {
+            gameState.boardState[suitKey] = { low: 7, high: 7 };
+        } else if (cardRankVal > 7) {
+            gameState.boardState[suitKey].high = cardRankVal;
+        } else {
+            gameState.boardState[suitKey].low = cardRankVal;
+        }
+        
+        if (gameState.isFirstMove) {
+            gameState.isFirstMove = false;
+        }
+
+        addLog(`[Bot] ${botPlayer.name} played the ${cardToPlay.rank} of ${cardToPlay.suit}.`);
+
+        if (botPlayer.hand.length === 0) {
+            addLog(`[Bot] ${botPlayer.name} has played its last card.`);
+            // Bot does not "win", just empties its hand
+        }
+    } else {
+        // No valid move, bot passes
+        addLog(`[Bot] ${botPlayer.name} passed.`);
+    }
+
+    // Get next player
+    gameState.currentPlayerId = getNextPlayerId(botPlayer.playerId);
+
+    if (gameState.currentPlayerId === null) {
+        // This means no players (human or bot) have any valid moves or cards left
+        addLog('All players are out of cards or moves. Ending round.');
+        endRound(null); // End round with no winner
+    } else {
+        io.emit('updateGameState', gameState);
+        checkAndRunNextBotTurn(); // Chain to next bot if needed
+    }
+}
+
+
+// *** MODIFIED: handlePlayerRemoval to enable Bot mode ***
 function handlePlayerRemoval(playerId) {
     if (!gameState) return;
     const playerToRemove = gameState.players.find(p => p.playerId === playerId);
+    
     if (playerToRemove && playerToRemove.status !== 'Removed') {
-        playerToRemove.status = 'Removed';
-        addLog(`Player ${playerToRemove.name} was removed after 60 seconds.`);
+        // --- NEW BOT LOGIC ---
+        playerToRemove.status = 'Removed'; // Mark as removed for scoring/next round
+        playerToRemove.isBot = true;      // Mark as bot to finish playing hand
+        addLog(`[Bot] ${playerToRemove.name} disconnected and is now bot-controlled.`);
         delete reconnectTimers[playerId];
+        // --- END NEW BOT LOGIC ---
 
-        const activePlayers = gameState.players.filter(p => p.status === 'Active');
-        if (activePlayers.length < 2) {
-            addLog('Not enough players. Ending game.');
-            endSession(true); // Pass true to indicate game was aborted
+        // Check if game can continue
+        const realActivePlayers = gameState.players.filter(p => p.status === 'Active' && p.isBot !== true);
+        if (realActivePlayers.length < 2) {
+            addLog('Not enough human players. Ending game.');
+            endSession(true);
             return;
         } 
             
+        // Handle host change
         if (playerToRemove.isHost) {
-            const newHost = activePlayers[0];
+            const newHost = realActivePlayers[0]; // New host must be human
             if (newHost) {
                 newHost.isHost = true;
                 addLog(`${newHost.name} is the new host.`);
             }
         }
-        if (gameState.currentPlayerId === playerId) {
-            gameState.currentPlayerId = getNextPlayerId(playerId);
-        }
         
+        // Handle pause state
         const stillDisconnected = gameState.players.some(p => p.status === 'Disconnected');
         if (!stillDisconnected) {
             gameState.isPaused = false;
@@ -337,6 +403,11 @@ function handlePlayerRemoval(playerId) {
         }
 
         io.emit('updateGameState', gameState);
+
+        // If it was the removed player's turn, trigger bot turn
+        if (gameState.currentPlayerId === playerId) {
+            runBotTurn(playerToRemove);
+        }
     }
 }
 
@@ -494,13 +565,10 @@ io.on('connection', (socket) => {
                 player.hand.splice(cardInHandIndex, 1);
                 
                 const cardRankVal = RANK_ORDER[cardToPlay.rank];
-
-                // --- BUG FIX: Use suitKey for 2-deck logic ---
                 const deckIndex = cardToPlay.id.split('-')[2];
                 const suitKey = `${cardToPlay.suit}-${deckIndex}`;
 
                 if (!gameState.boardState[suitKey]) {
-                    // This is the 7, create the layout
                     gameState.boardState[suitKey] = { low: 7, high: 7 };
                 } else if (cardRankVal > 7) {
                     gameState.boardState[suitKey].high = cardRankVal;
@@ -515,13 +583,13 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} played the ${cardToPlay.rank} of ${cardToPlay.suit}.`);
 
                 if (player.hand.length === 0) {
-                    // *** NEW: End the round, don't end the session ***
-                    endRound(player);
+                    endRound(player); // Human player wins
                     return;
                 }
 
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
+                checkAndRunNextBotTurn(); // Check if next player is bot
                 
             } else {
                 socket.emit('warning', { title: 'Invalid Move', message: 'That is not a valid move.' });
@@ -543,11 +611,11 @@ io.on('connection', (socket) => {
                 addLog(`${player.name} passed.`);
                 gameState.currentPlayerId = getNextPlayerId(player.playerId);
                 io.emit('updateGameState', gameState);
+                checkAndRunNextBotTurn(); // Check if next player is bot
             }
         }
     });
 
-    // *** NEW: Listener for host to start next round ***
     socket.on('requestNextRound', () => {
         if (!gameState) return;
         const player = gameState.players.find(p => p.socketId === socket.id);
@@ -580,7 +648,7 @@ io.on('connection', (socket) => {
             
             const afkSocket = io.sockets.sockets.get(playerToMark.socketId);
             if (afkSocket) {
-                afkSocket.emit('youWereMarkedAFK');
+                afkSocket.emit('youWereMarkedAFK'); // Correct event name
             }
         }
     });
@@ -621,7 +689,7 @@ io.on('connection', (socket) => {
         }
 
         if (isHost) {
-            endSession(false); // Pass false, it's a clean host-initiated end, not an abort
+            endSession(false); 
         }
     });
 
