@@ -6,32 +6,75 @@
     --light-text: #f5f5dc;
     --parchment-bg: #D2B48C;
     --dark-text: #4a2c2a;
-    --busted-red: #c70039; /* Color for Deck 2 border */
+    --busted-red: #c70039; /* Keeping variable in case needed later */
     --sienna-border: #a0522d;
-    /* Removed --deck2-inset-gray */
+    /* *** NEW: Define a gray for the inset border *** */
+    --deck2-inset-gray: #888888;
 }
 
-/* *** NEW: Animation for playable cards (pulsing scale) *** */
-@keyframes pulse-scale {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.9; } /* Subtle opacity change */
-    100% { transform: scale(1); opacity: 1; }
+/* Animation for playable cards */
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+    50% {
+        box-shadow: 0 0 25px #ffc400;
+        border-color: #ffc400;
+    }
+    100% {
+        box-shadow: 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
 }
-/* *** REMOVED: pulse-glow and pulse-glow-combo animations *** */
+
+/* *** RESTORED & MODIFIED: Combo animation for playable Deck 2 (Strict) cards *** */
+@keyframes pulse-glow-combo {
+    0% {
+        /* Combine thick gray inset shadow with yellow outer glow */
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+    50% {
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 25px #ffc400;
+        border-color: #ffc400;
+    }
+    100% {
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+}
+
 
 body {
     font-family: Helvetica, Arial, sans-serif;
     background-color: var(--teak-dark);
     background-image: url('https://www.transparenttextures.com/patterns/wood-pattern.png');
-    padding: 15px; margin: 0; min-height: 100vh; box-sizing: border-box; color: var(--light-text); overflow-y: auto; overflow-x: hidden;
+    padding: 15px;
+    margin: 0;
+    min-height: 100vh;
+    box-sizing: border-box;
+    color: var(--light-text);
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* --- Join & Lobby Screens --- */
-#join-screen, #lobby-screen { text-align: center; max-width: 500px; margin: 50px auto; padding: 20px; background-color: var(--teak-light); border-radius: 10px; box-shadow: 0 0 15px rgba(0,0,0,0.5); }
+#join-screen, #lobby-screen {
+    text-align: center;
+    max-width: 500px;
+    margin: 50px auto;
+    padding: 20px;
+    background-color: var(--teak-light);
+    border-radius: 10px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+}
 #player-name-input, #host-password-input { font-size: 1.1em; padding: 10px; border-radius: 5px; border: 2px solid var(--teak-dark); width: 80%; }
 #player-list { list-style: none; padding: 0; }
 #player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
 .kick-btn { font-size: 0.8em; padding: 3px 7px; }
+
+/* Lobby Settings */
 .game-settings { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; margin: 15px 0; text-align: left; }
 .setting-group-label { font-size: 1.1em; font-weight: bold; color: var(--gold-accent); display: block; margin-bottom: 10px; }
 .setting-option { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
@@ -55,7 +98,7 @@ body {
 .my-score-box .score-value { font-size: 1.5em; font-weight: bold; color: var(--gold-accent); margin-left: 10px; }
 #my-hand-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; flex-grow: 1; flex-shrink: 1; overflow-y: auto; min-height: 100px; align-content: flex-start; }
 #my-actions-panel { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; flex-shrink: 0; padding: 5px 0; }
-.action-btn { padding: 12px 20px; font-size: 1.1em; background-color: var(--gold-accent); color: var(--teak-dark); border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: background-color 0.2s ease; } /* Adjusted transition */
+.action-btn { padding: 12px 20px; font-size: 1.1em; background-color: var(--gold-accent); color: var(--teak-dark); border: none; border-radius: 8px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.3); transition: all 0.2s ease; }
 .action-btn:hover:not(:disabled) { background-color: #ffc400; }
 .action-btn:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opacity: 0.7; }
 .action-btn.secondary-btn { background-color: var(--teak-light); color: var(--light-text); }
@@ -77,41 +120,28 @@ body {
 .other-player-status.reconnecting { background-color: var(--busted-red); }
 .other-player-status.bot { background-color: #4a6a8c; }
 
-/* --- SVG Card Styles (Applied to img elements) --- */
+/* --- SVG Card Styles --- */
+/* *** REMOVED: position: relative and overflow: hidden from here *** */
+/* (It caused issues with hover effects like translateY) */
 .card-img {
-    width: 100px; height: 140px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease, opacity 0.2s ease; /* Adjusted transition */
-    cursor: not-allowed;
-    border: 3px solid transparent; /* Default transparent border */
-    box-sizing: border-box; /* Include border in size */
-    display: block; /* Fix potential inline spacing issues */
+    width: 100px; height: 140px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; cursor: not-allowed; border: 3px solid transparent; box-sizing: border-box;
+    /* Add position relative here if needed for specific children, but ::before doesn't need it */
 }
-.card-img:hover {
-    /* Don't apply scale on hover if pulsating */
-    transform: translateY(-10px);
-    z-index: 10;
+.card-img:hover { transform: translateY(-10px); z-index: 10; }
+.card-img.playable-card { cursor: pointer; border: 3px solid var(--gold-accent); animation: pulse-glow 1.5s infinite; }
+.card-img.playable-card:hover { transform: translateY(-10px) scale(1.05); }
+
+/* *** MODIFIED: Deck 2 Tint - Thick Gray Inset Border *** */
+.deck-1-tint {
+    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Combined inset gray + default shadow */
 }
 
-/* *** MODIFIED: Playable Card Pulsing Scale *** */
-.card-img.playable-card {
-    cursor: pointer;
-    animation: pulse-scale 1.8s infinite ease-in-out;
-    border-color: transparent; /* Ensure pulse doesn't show default border */
-    /* Remove glow border/box-shadow */
-}
-/* Adjust hover for playable cards to avoid scale conflict */
-.card-img.playable-card:hover {
-    transform: translateY(-10px); /* Only lift on hover */
+/* *** RESTORED: Combo animation for playable strict Deck 2 card *** */
+.card-img.playable-card.deck-1-tint {
+    animation: pulse-glow-combo 1.5s infinite;
 }
 
-
-/* *** RESTORED & MODIFIED: Deck 2 Tint - Thick Red Border *** */
-.card-img.deck-1-tint {
-    border: 6px solid var(--busted-red); /* Thick red border */
-    box-sizing: border-box; /* Crucial: border included in element size */
-    /* Remove box-shadow specific to tint */
-}
-
+/* *** REMOVED: deck-1-tint::before pseudo-element styles *** */
 
 /* --- Table & "Smart River" Styles --- */
 #game-status-banner { padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; background-color: var(--parchment-bg); color: var(--dark-text); border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); flex-shrink: 0; }
@@ -119,24 +149,13 @@ body {
 #river-container { display: flex; flex-direction: column; gap: 1px; flex-grow: 1; }
 .river-row { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; min-height: 110px; flex-grow: 1; display: grid; grid-template-columns: repeat(13, 1fr); align-items: center; gap: 2px; }
 .river-row-label { grid-column: 1 / 14; text-align: center; font-size: 1.1em; font-weight: bold; color: var(--gold-accent); padding-bottom: 5px; border-bottom: 1px solid rgba(218, 165, 32, 0.2); margin-bottom: 5px; }
+.river-card { border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; flex-shrink: 0; width: 100%; height: auto; aspect-ratio: 100 / 140; max-width: 95px; margin: 0 auto; }
 
-.river-card {
-    border-radius: 4px; /* Smaller radius for river cards */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease; /* Simpler transition */
-    flex-shrink: 0; width: 100%; height: auto; aspect-ratio: 100 / 140; max-width: 95px; margin: 0 auto;
-    border: 1px solid transparent; /* Default transparent border for river cards */
-    box-sizing: border-box;
-    display: block;
-}
-
-/* *** RESTORED & MODIFIED: River card Deck 2 tint - Thick Red Border *** */
+/* *** MODIFIED: River card Deck 2 tint uses inset shadow *** */
 .river-card.deck-1-tint {
-    border: 4px solid var(--busted-red); /* Slightly thinner border for river */
-    box-sizing: border-box;
-    /* Remove box-shadow */
+    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Tint for river cards */
+    box-sizing: border-box; /* Ensure border doesn't add size */
 }
-
 
 .river-placeholder { font-size: 1.5em; font-weight: bold; color: var(--light-text); opacity: 0.3; text-align: center; grid-column: 1 / 14; }
 .river-card-placeholder { border-radius: 4px; border: 2px dashed var(--gold-accent); box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: var(--gold-accent); font-family: Arial, sans-serif; font-weight: bold; flex-shrink: 0; opacity: 0.6; width: 100%; height: auto; aspect-ratio: 100 / 140; font-size: 1.2vw; max-width: 95px; margin: 0 auto; }
@@ -171,7 +190,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 #round-over-scoreboard th, #game-over-scoreboard th { background-color: var(--teak-light); color: var(--light-text); }
 #round-over-scoreboard tr:nth-child(even), #game-over-scoreboard tr:nth-child(even) { background-color: rgba(0,0,0,0.05); }
 #round-over-scoreboard .score-col, #game-over-scoreboard .score-col { text-align: right; font-weight: bold; }
-.final-hands-header { margin-top: 20px; margin-bottom: 10px; color: var(--teak-dark); }
+.final-hands-header { margin-top: 20px; margin-bottom: 10px; color: var(--dark-text); }
 #round-over-hands .player-hand-display { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px dashed var(--teak-light); }
 #round-over-hands .player-hand-display:last-child { border-bottom: none; }
 #round-over-hands .player-hand-name { font-weight: bold; margin-bottom: 5px; }
@@ -212,17 +231,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     #page-indicator > button { flex: 1; padding: 10px 5px; font-size: 0.9em; text-align: center; white-space: nowrap; }
     .page-toggle-btn { background-color: transparent; color: var(--light-text); border: none; border-radius: 0; opacity: 0.6; }
     .page-toggle-btn.active { background-color: var(--teak-light); opacity: 1; font-weight: bold; }
-
-    /* Adjust card sizes for mobile */
-    .card-img { width: 80px; height: 112px; border-width: 2px; } /* Adjusted default border */
-    .card-img.deck-1-tint { border-width: 4px; } /* Thinner red border for mobile */
-
+    .card-img { width: 80px; height: 112px; border-width: 2px; }
     #river-container, #my-hand-container { flex-grow: 0; }
     .river-row { display: flex; grid-template-columns: unset; justify-content: center; overflow-x: hidden; min-height: 110px; }
     .river-row-label { display: none; }
-    .river-card { width: 70px; height: 98px; aspect-ratio: unset; max-width: none; border-width: 1px; } /* Adjusted default border */
-    .river-card.deck-1-tint { border-width: 3px; } /* Thinner red border for mobile river */
-
+    .river-card { width: 70px; height: 98px; aspect-ratio: unset; max-width: none; }
     .river-card-placeholder { width: 70px; height: 98px; font-size: 1.2em; aspect-ratio: unset; max-width: none; }
     .river-empty-placeholder { display: none; }
     .river-card.bunched { margin-left: -55px; z-index: 1; transition: all 0.2s ease; }
