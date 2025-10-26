@@ -28,21 +28,21 @@
     }
 }
 
-/* *** NEW: Combo animation for playable Deck 2 (Strict) cards *** */
+/* *** MODIFIED: Combo animation for playable Deck 2 (Strict) cards *** */
 @keyframes pulse-glow-combo-deck2 {
     0% {
-        /* Combine blue glow + yellow glow */
-        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
+        /* Combine blue glow (3px spread) + yellow glow */
+        box-shadow: 0 0 10px 3px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
         border-color: var(--gold-accent);
     }
     50% {
-        /* Combine blue glow + brighter yellow glow */
-        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 25px #ffc400;
+        /* Combine blue glow (3px spread) + brighter yellow glow */
+        box-shadow: 0 0 10px 3px var(--deck2-glow-blue), 0 0 25px #ffc400;
         border-color: #ffc400;
     }
     100% {
-        /* Combine blue glow + yellow glow */
-        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
+        /* Combine blue glow (3px spread) + yellow glow */
+        box-shadow: 0 0 10px 3px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
         border-color: var(--gold-accent);
     }
 }
@@ -130,9 +130,9 @@ body {
 .card-img.playable-card { cursor: pointer; border: 3px solid var(--gold-accent); animation: pulse-glow 1.5s infinite; }
 .card-img.playable-card:hover { transform: translateY(-10px) scale(1.05); }
 
-/* *** MODIFIED: Deck 2 Tint - Outset blue glow *** */
+/* *** MODIFIED: Deck 2 Tint - Outset blue glow (3px spread) *** */
 .deck-2-card {
-    box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Combined blue glow + default shadow */
+    box-shadow: 0 0 10px 3px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Combined blue glow + default shadow */
 }
 
 /* *** MODIFIED: Combo animation for playable strict Deck 2 card *** */
@@ -148,9 +148,9 @@ body {
 .river-row-label { grid-column: 1 / 14; text-align: center; font-size: 1.1em; font-weight: bold; color: var(--gold-accent); padding-bottom: 5px; border-bottom: 1px solid rgba(218, 165, 32, 0.2); margin-bottom: 5px; }
 .river-card { border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; flex-shrink: 0; width: 100%; height: auto; aspect-ratio: 100 / 140; max-width: 95px; margin: 0 auto; }
 
-/* *** MODIFIED: River card Deck 2 glow *** */
+/* *** MODIFIED: River card Deck 2 glow (2px spread) *** */
 .river-card.deck-2-card {
-    box-shadow: 0 0 8px 3px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Blue glow for river cards */
+    box-shadow: 0 0 8px 2px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Blue glow for river cards */
     box-sizing: border-box; /* Ensure border doesn't add size */
 }
 
@@ -194,7 +194,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 #round-over-hands .player-hand-cards { display: flex; flex-wrap: wrap; gap: 3px; }
 #round-over-hands .final-card-img { width: 40px; height: auto; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
 
-/* *** NEW: Style for Deck 2 cards in the final hand modal *** */
+/* *** MODIFIED: Style for Deck 2 cards (1px spread) in the final hand modal *** */
 .final-card-img.deck-2-card {
     box-shadow: 0 0 4px 1px var(--deck2-glow-blue), 0 1px 2px rgba(0,0,0,0.2);
 }
@@ -227,8 +227,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
     #game-board.table-view #dashboard-column { display: none; }
     #game-board.table-view #table-column { display: flex; flex-basis: 100%; width: 100%; margin: 0; padding: 10px; box-sizing: border-box; }
     #my-actions-panel { display: none; }
-    #dashboard-column { padding-bottom: 25px; }
-    #table-column { border: none; padding-bottom: 25px; }
+    
+    /* *** MODIFIED: Increased padding-bottom to 60px *** */
+    #dashboard-column { padding-bottom: 60px; }
+    #table-column { border: none; padding-bottom: 60px; }
+    
     #page-indicator { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: var(--teak-dark); border-top: 2px solid var(--teak-light); padding: 5px; gap: 5px; }
     #page-indicator > button { flex: 1; padding: 10px 5px; font-size: 0.9em; text-align: center; white-space: nowrap; }
     .page-toggle-btn { background-color: transparent; color: var(--light-text); border: none; border-radius: 0; opacity: 0.6; }
