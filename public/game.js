@@ -18,7 +18,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const RANK_ORDER = { 'A': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'J': 11, 'Q': 12, 'K': 13 };
     const ALL_RANKS = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     const SUITS_ORDER = { 'Hearts': 1, 'Diamonds': 2, 'Clubs': 3, 'Spades': 4 };
-    // *** THIS IS THE FIX: Added the missing SUITS constant ***
     const SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
     // --- END Constants ---
 
@@ -826,13 +825,12 @@ window.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // *** MODIFIED: Cleaned up Placeholder Logic ***
     function createRiverRow(layout, suitName, deckIndex, numDecks, isFungible, isMobile) {
         try {
             const row = document.createElement('div');
             row.className = 'river-row';
 
-            // Add Desktop Label (No changes needed here)
+            // Add Desktop Label
             if (!isMobile) {
                 const labelEl = document.createElement('div');
                 labelEl.className = 'river-row-label';
@@ -846,27 +844,21 @@ window.addEventListener('DOMContentLoaded', () => {
             }
 
             if (!layout) {
-                // --- RENDER PLACEHOLDERS ---
+                // RENDER PLACEHOLDERS
                 if (isMobile) {
-                    // Mobile: Single placeholder div with text
                     const placeholder = document.createElement('div');
                     placeholder.className = 'river-placeholder';
-                    // Label includes Deck number for clarity, even if empty
                     const label = (numDecks == 2) ? `${suitName} (Deck ${parseInt(deckIndex) + 1})` : suitName;
                     placeholder.textContent = label;
                     row.appendChild(placeholder);
                 } else {
-                    // Desktop: Grid of 13 placeholders (7 highlighted)
                     ALL_RANKS.forEach((rank, i) => {
-                        if (i === 6) { // Position for the 7
-                            row.appendChild(createRiverPlaceholder('7'));
-                        } else {
-                            row.appendChild(createEmptyPlaceholder());
-                        }
+                        if (i === 6) { row.appendChild(createRiverPlaceholder('7')); }
+                        else { row.appendChild(createEmptyPlaceholder()); }
                     });
                 }
             } else {
-                // --- RENDER CARDS --- (No changes needed here)
+                // RENDER CARDS
                 const lowRankVal = layout.low;
                 const highRankVal = layout.high;
 
@@ -894,70 +886,56 @@ window.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
-            return row; // Return the successfully created row
+            return row;
         } catch (error) {
             console.error("Error creating river row:", { layout, suitName, deckIndex, error });
-            return null; // Return null if an error occurred
+            return null;
         }
     }
 
 
     // *** Client-side logic for fungible move validation ***
     function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
-        if (!card || !boardState || !hand) return false; // Safety check
-        if (isFirstMove) {
-            return card.id === '7-Hearts-c1';
-        }
+        if (!card || !boardState || !hand) return false;
+        if (isFirstMove) { return card.id === '7-Hearts-c1'; }
 
         const suitLayout = boardState[card.suit];
         const cardRankVal = RANK_ORDER[card.rank];
 
         if (card.rank === '7') {
-            if (!suitLayout) return true; // Can play if suit layout doesn't exist
-            if (suitLayout.row1 && !suitLayout.row2) return true; // Can play if only row1 exists
-            return false; // Cannot play if both rows exist
+            if (!suitLayout) return true;
+            if (suitLayout.row1 && !suitLayout.row2) return true;
+            return false;
         }
 
-        // Check non-7 cards against existing rows
         if (suitLayout) {
-            if (suitLayout.row1) {
-                if (cardRankVal === suitLayout.row1.high + 1) return true;
-                if (cardRankVal === suitLayout.row1.low - 1) return true;
-            }
-            if (suitLayout.row2) {
-                if (cardRankVal === suitLayout.row2.high + 1) return true;
-                if (cardRankVal === suitLayout.row2.low - 1) return true;
-            }
+            if (suitLayout.row1 && (cardRankVal === suitLayout.row1.high + 1 || cardRankVal === suitLayout.row1.low - 1)) return true;
+            if (suitLayout.row2 && (cardRankVal === suitLayout.row2.high + 1 || cardRankVal === suitLayout.row2.low - 1)) return true;
         }
-        return false; // Not playable on any row
+        return false;
     }
 
     // *** Client-side logic for strict move validation ***
     function checkValidMoveStrict(card, boardState, hand, isFirstMove) {
-        if (!card || !boardState || !hand) return false; // Safety check
-        if (isFirstMove) {
-            return card.id === '7-Hearts-0';
-        }
+        if (!card || !boardState || !hand) return false;
+        if (isFirstMove) { return card.id === '7-Hearts-0'; }
 
         const deckIndex = card.id.split('-')[2];
         const suitKey = `${card.suit}-${deckIndex}`;
 
-        if (card.rank === '7') {
-            return !boardState[suitKey]; // Can play 7 if its specific layout doesn't exist
-        }
+        if (card.rank === '7') { return !boardState[suitKey]; }
 
         const suitLayout = boardState[suitKey];
         if (suitLayout) {
             const cardRankVal = RANK_ORDER[card.rank];
-            if (cardRankVal === suitLayout.high + 1) return true;
-            if (cardRankVal === suitLayout.low - 1) return true;
+            if (cardRankVal === suitLayout.high + 1 || cardRankVal === suitLayout.low - 1) return true;
         }
-        return false; // Not playable on its specific layout
+        return false;
     }
 
     // *** This function now correctly calls the helpers ***
     function getValidMoves(hand, gs) {
-        if (!hand || !gs || !gs.settings || !gs.boardState) return []; // More safety checks
+        if (!hand || !gs || !gs.settings || !gs.boardState) return [];
 
         const boardState = gs.boardState;
         const isFirstMove = gs.isFirstMove;
@@ -1128,63 +1106,85 @@ window.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // *** MODIFIED: Refactored makeDraggable Function ***
     function makeDraggable(modal) {
         const modalContent = modal.querySelector('.modal-content');
         const header = modal.querySelector('.modal-header');
-        if (!header) return;
-        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        if (!header || !modalContent) return;
+
+        let startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
+
         const dragMouseDown = (e) => {
             e.preventDefault();
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            document.onmouseup = closeDragElement;
-            document.onmousemove = elementDrag;
+            startX = e.clientX;
+            startY = e.clientY;
+            // Get initial position based on computed style
+            const style = window.getComputedStyle(modalContent);
+            initialLeft = parseInt(style.left, 10);
+            initialTop = parseInt(style.top, 10);
+            // Remove transform if it exists, use top/left for positioning
+            modalContent.style.transform = 'none';
+
+            document.addEventListener('mousemove', elementDrag);
+            document.addEventListener('mouseup', closeDragElement);
         };
+
         const dragTouchStart = (e) => {
             if (e.touches.length === 1) {
-                pos3 = e.touches[0].clientX;
-                pos4 = e.touches[0].clientY;
-                document.ontouchend = closeTouchDragElement;
-                document.ontouchmove = elementTouchDrag;
+                // e.preventDefault(); // Might prevent scrolling on touch devices, test needed
+                const touch = e.touches[0];
+                startX = touch.clientX;
+                startY = touch.clientY;
+                 // Get initial position based on computed style
+                const style = window.getComputedStyle(modalContent);
+                initialLeft = parseInt(style.left, 10);
+                initialTop = parseInt(style.top, 10);
+                // Remove transform if it exists, use top/left for positioning
+                modalContent.style.transform = 'none';
+
+                document.addEventListener('touchmove', elementTouchDrag, { passive: false }); // Need preventDefault in touchmove
+                document.addEventListener('touchend', closeTouchDragElement);
             }
         };
+
         const elementDrag = (e) => {
             e.preventDefault();
-            pos1 = pos3 - e.clientX;
-            pos2 = pos4 - e.clientY;
-            pos3 = e.clientX;
-            pos4 = e.clientY;
-            if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
-                 modalContent.style.left = '50%';
-                 modalContent.style.top = '50%';
-                 modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - pos2}px))`;
-            } else {
-                modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
-                modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
-            }
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            // Calculate new top and left based on initial position + delta
+            modalContent.style.left = (initialLeft + deltaX) + "px";
+            modalContent.style.top = (initialTop + deltaY) + "px";
         };
+
         const elementTouchDrag = (e) => {
             if (e.touches.length === 1) {
-                e.preventDefault();
-                pos1 = pos3 - e.touches[0].clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.touches[0].clientX;
-                pos4 = e.touches[0].clientY;
-                if (!modalContent.style.transform || modalContent.style.transform === 'translate(-50%, -50%)') {
-                     modalContent.style.left = '50%';
-                     modalContent.style.top = '50%';
-                     modalContent.style.transform = `translate(calc(-50% + ${modalContent.offsetLeft - pos1}px), calc(-50% + ${modalContent.offsetTop - 2}px))`;
-                } else {
-                    modalContent.style.top = (modalContent.offsetTop - pos2) + "px";
-                    modalContent.style.left = (modalContent.offsetLeft - pos1) + "px";
-                }
+                e.preventDefault(); // Prevent page scroll while dragging
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - startX;
+                const deltaY = touch.clientY - startY;
+
+                // Calculate new top and left based on initial position + delta
+                modalContent.style.left = (initialLeft + deltaX) + "px";
+                modalContent.style.top = (initialTop + deltaY) + "px";
             }
         };
-        const closeDragElement = () => { document.onmouseup = null; document.onmousemove = null; };
-        const closeTouchDragElement = () => { document.ontouchend = null; document.ontouchmove = null; };
+
+        const closeDragElement = () => {
+            document.removeEventListener('mousemove', elementDrag);
+            document.removeEventListener('mouseup', closeDragElement);
+        };
+
+        const closeTouchDragElement = () => {
+            document.removeEventListener('touchmove', elementTouchDrag);
+            document.removeEventListener('touchend', closeTouchDragElement);
+        };
+
         header.addEventListener('mousedown', dragMouseDown);
-        header.addEventListener('touchstart', dragTouchStart, { passive: false });
+        header.addEventListener('touchstart', dragTouchStart, { passive: true }); // passive: true for start if not preventing default
     }
+    // *** END MODIFICATION ***
+
 
     document.querySelectorAll('.modal').forEach(makeDraggable);
 });
