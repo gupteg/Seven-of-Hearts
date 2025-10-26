@@ -8,8 +8,8 @@
     --dark-text: #4a2c2a;
     --busted-red: #c70039; /* Keeping variable in case needed later */
     --sienna-border: #a0522d;
-    /* *** NEW: Define a gray for the inset border *** */
-    --deck2-inset-gray: #888888;
+    /* *** MODIFIED: Define a blue glow for Deck 2 cards *** */
+    --deck2-glow-blue: #00aaff;
 }
 
 /* Animation for playable cards */
@@ -28,19 +28,21 @@
     }
 }
 
-/* *** RESTORED & MODIFIED: Combo animation for playable Deck 2 (Strict) cards *** */
-@keyframes pulse-glow-combo {
+/* *** NEW: Combo animation for playable Deck 2 (Strict) cards *** */
+@keyframes pulse-glow-combo-deck2 {
     0% {
-        /* Combine thick gray inset shadow with yellow outer glow */
-        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        /* Combine blue glow + yellow glow */
+        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
         border-color: var(--gold-accent);
     }
     50% {
-        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 25px #ffc400;
+        /* Combine blue glow + brighter yellow glow */
+        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 25px #ffc400;
         border-color: #ffc400;
     }
     100% {
-        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        /* Combine blue glow + yellow glow */
+        box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 0 10px var(--gold-accent);
         border-color: var(--gold-accent);
     }
 }
@@ -121,27 +123,22 @@ body {
 .other-player-status.bot { background-color: #4a6a8c; }
 
 /* --- SVG Card Styles --- */
-/* *** REMOVED: position: relative and overflow: hidden from here *** */
-/* (It caused issues with hover effects like translateY) */
 .card-img {
     width: 100px; height: 140px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; cursor: not-allowed; border: 3px solid transparent; box-sizing: border-box;
-    /* Add position relative here if needed for specific children, but ::before doesn't need it */
 }
 .card-img:hover { transform: translateY(-10px); z-index: 10; }
 .card-img.playable-card { cursor: pointer; border: 3px solid var(--gold-accent); animation: pulse-glow 1.5s infinite; }
 .card-img.playable-card:hover { transform: translateY(-10px) scale(1.05); }
 
-/* *** MODIFIED: Deck 2 Tint - Thick Gray Inset Border *** */
-.deck-1-tint {
-    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Combined inset gray + default shadow */
+/* *** MODIFIED: Deck 2 Tint - Outset blue glow *** */
+.deck-2-card {
+    box-shadow: 0 0 10px 4px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Combined blue glow + default shadow */
 }
 
-/* *** RESTORED: Combo animation for playable strict Deck 2 card *** */
-.card-img.playable-card.deck-1-tint {
-    animation: pulse-glow-combo 1.5s infinite;
+/* *** MODIFIED: Combo animation for playable strict Deck 2 card *** */
+.card-img.playable-card.deck-2-card {
+    animation: pulse-glow-combo-deck2 1.5s infinite;
 }
-
-/* *** REMOVED: deck-1-tint::before pseudo-element styles *** */
 
 /* --- Table & "Smart River" Styles --- */
 #game-status-banner { padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; background-color: var(--parchment-bg); color: var(--dark-text); border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); flex-shrink: 0; }
@@ -151,9 +148,9 @@ body {
 .river-row-label { grid-column: 1 / 14; text-align: center; font-size: 1.1em; font-weight: bold; color: var(--gold-accent); padding-bottom: 5px; border-bottom: 1px solid rgba(218, 165, 32, 0.2); margin-bottom: 5px; }
 .river-card { border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; flex-shrink: 0; width: 100%; height: auto; aspect-ratio: 100 / 140; max-width: 95px; margin: 0 auto; }
 
-/* *** MODIFIED: River card Deck 2 tint uses inset shadow *** */
-.river-card.deck-1-tint {
-    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Tint for river cards */
+/* *** MODIFIED: River card Deck 2 glow *** */
+.river-card.deck-2-card {
+    box-shadow: 0 0 8px 3px var(--deck2-glow-blue), 0 2px 5px rgba(0,0,0,0.3); /* Blue glow for river cards */
     box-sizing: border-box; /* Ensure border doesn't add size */
 }
 
@@ -196,6 +193,11 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 #round-over-hands .player-hand-name { font-weight: bold; margin-bottom: 5px; }
 #round-over-hands .player-hand-cards { display: flex; flex-wrap: wrap; gap: 3px; }
 #round-over-hands .final-card-img { width: 40px; height: auto; border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.2); }
+
+/* *** NEW: Style for Deck 2 cards in the final hand modal *** */
+.final-card-img.deck-2-card {
+    box-shadow: 0 0 4px 1px var(--deck2-glow-blue), 0 1px 2px rgba(0,0,0,0.2);
+}
 
 /* --- Announcement Styles --- */
 #move-announcement-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.8); color: var(--gold-accent); padding: 8px 15px; border-radius: 5px; font-size: 1.1em; font-weight: bold; z-index: 1001; opacity: 0; transition: opacity 0.5s ease-in-out; pointer-events: none; white-space: nowrap; }

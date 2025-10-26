@@ -479,7 +479,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
-            img.classList.add('deck-1-tint');
+            // *** MODIFIED: Apply new class ***
+            img.classList.add('deck-2-card');
         }
         return img;
     }
@@ -661,6 +662,8 @@ window.addEventListener('DOMContentLoaded', () => {
         bannerMobile.textContent = bannerText;
     }
 
+
+
     function updatePauseBanner(gs) {
         const banner = document.getElementById('game-status-banner');
         const bannerMobile = document.getElementById('dashboard-status-banner');
@@ -709,7 +712,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
         const deckIndex = card.id.split('-')[2];
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
-            img.classList.add('deck-1-tint');
+            // *** MODIFIED: Apply new class ***
+            img.classList.add('deck-2-card');
         }
 
         return img;
@@ -726,7 +730,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
         if (numDecks == 2 && !isFungible && deckIndex === '1') {
-            img.classList.add('deck-1-tint');
+            // *** MODIFIED: Apply new class ***
+            img.classList.add('deck-2-card');
         }
 
         return img;
