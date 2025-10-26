@@ -6,11 +6,13 @@
     --light-text: #f5f5dc;
     --parchment-bg: #D2B48C;
     --dark-text: #4a2c2a;
-    --busted-red: #c70039;
+    --busted-red: #c70039; /* Keeping variable in case needed later */
     --sienna-border: #a0522d;
+    /* *** NEW: Define a gray for the inset border *** */
+    --deck2-inset-gray: #888888;
 }
 
-/* *** NEW: Animation for playable cards *** */
+/* Animation for playable cards */
 @keyframes pulse-glow {
     0% {
         box-shadow: 0 0 10px var(--gold-accent);
@@ -25,7 +27,24 @@
         border-color: var(--gold-accent);
     }
 }
-/* *** REMOVED: pulse-glow-combo animation (no longer needed with wash) *** */
+
+/* *** RESTORED & MODIFIED: Combo animation for playable Deck 2 (Strict) cards *** */
+@keyframes pulse-glow-combo {
+    0% {
+        /* Combine thick gray inset shadow with yellow outer glow */
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+    50% {
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 25px #ffc400;
+        border-color: #ffc400;
+    }
+    100% {
+        box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 0 10px var(--gold-accent);
+        border-color: var(--gold-accent);
+    }
+}
+
 
 body {
     font-family: Helvetica, Arial, sans-serif;
@@ -57,19 +76,8 @@ body {
 
 /* Lobby Settings */
 .game-settings { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; margin: 15px 0; text-align: left; }
-.setting-group-label {
-    font-size: 1.1em;
-    font-weight: bold;
-    color: var(--gold-accent);
-    display: block;
-    margin-bottom: 10px;
-}
-.setting-option {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-}
+.setting-group-label { font-size: 1.1em; font-weight: bold; color: var(--gold-accent); display: block; margin-bottom: 10px; }
+.setting-option { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 .setting-option:last-child { margin-bottom: 0; }
 .setting-option label { font-size: 1em; color: var(--light-text); }
 .setting-option input[type="radio"] { accent-color: var(--gold-accent); width: 18px; height: 18px; }
@@ -113,30 +121,27 @@ body {
 .other-player-status.bot { background-color: #4a6a8c; }
 
 /* --- SVG Card Styles --- */
-.card-img, .river-card {
-    position: relative; /* Needed for pseudo-element positioning */
-    overflow: hidden; /* Keep overlay contained */
-}
-
+/* *** REMOVED: position: relative and overflow: hidden from here *** */
+/* (It caused issues with hover effects like translateY) */
 .card-img {
     width: 100px; height: 140px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; cursor: not-allowed; border: 3px solid transparent; box-sizing: border-box;
+    /* Add position relative here if needed for specific children, but ::before doesn't need it */
 }
 .card-img:hover { transform: translateY(-10px); z-index: 10; }
 .card-img.playable-card { cursor: pointer; border: 3px solid var(--gold-accent); animation: pulse-glow 1.5s infinite; }
 .card-img.playable-card:hover { transform: translateY(-10px) scale(1.05); }
 
-/* *** MODIFIED: Deck 2 Tint - Gray Wash using ::before pseudo-element *** */
-.deck-1-tint::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(200, 200, 200, 0.35); /* Gray wash, 35% opacity */
-    z-index: 1; /* Above background, below content */
-    pointer-events: none;
-    border-radius: inherit; /* Match parent border radius */
+/* *** MODIFIED: Deck 2 Tint - Thick Gray Inset Border *** */
+.deck-1-tint {
+    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Combined inset gray + default shadow */
 }
-/* *** REMOVED: Inset box-shadow rule for .deck-1-tint *** */
-/* *** REMOVED: .card-img.playable-card.deck-1-tint combo rule *** */
+
+/* *** RESTORED: Combo animation for playable strict Deck 2 card *** */
+.card-img.playable-card.deck-1-tint {
+    animation: pulse-glow-combo 1.5s infinite;
+}
+
+/* *** REMOVED: deck-1-tint::before pseudo-element styles *** */
 
 /* --- Table & "Smart River" Styles --- */
 #game-status-banner { padding: 15px; text-align: center; font-size: 1.2em; font-weight: bold; background-color: var(--parchment-bg); color: var(--dark-text); border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); flex-shrink: 0; }
@@ -145,7 +150,13 @@ body {
 .river-row { background: rgba(0,0,0,0.2); border-radius: 8px; padding: 10px; min-height: 110px; flex-grow: 1; display: grid; grid-template-columns: repeat(13, 1fr); align-items: center; gap: 2px; }
 .river-row-label { grid-column: 1 / 14; text-align: center; font-size: 1.1em; font-weight: bold; color: var(--gold-accent); padding-bottom: 5px; border-bottom: 1px solid rgba(218, 165, 32, 0.2); margin-bottom: 5px; }
 .river-card { border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); transition: all 0.2s ease; flex-shrink: 0; width: 100%; height: auto; aspect-ratio: 100 / 140; max-width: 95px; margin: 0 auto; }
-/* *** REMOVED: .river-card.deck-1-tint rule (now covered by general .deck-1-tint::before) *** */
+
+/* *** MODIFIED: River card Deck 2 tint uses inset shadow *** */
+.river-card.deck-1-tint {
+    box-shadow: inset 0 0 0 8px var(--deck2-inset-gray), 0 2px 5px rgba(0,0,0,0.3); /* Tint for river cards */
+    box-sizing: border-box; /* Ensure border doesn't add size */
+}
+
 .river-placeholder { font-size: 1.5em; font-weight: bold; color: var(--light-text); opacity: 0.3; text-align: center; grid-column: 1 / 14; }
 .river-card-placeholder { border-radius: 4px; border: 2px dashed var(--gold-accent); box-sizing: border-box; display: flex; align-items: center; justify-content: center; color: var(--gold-accent); font-family: Arial, sans-serif; font-weight: bold; flex-shrink: 0; opacity: 0.6; width: 100%; height: auto; aspect-ratio: 100 / 140; font-size: 1.2vw; max-width: 95px; margin: 0 auto; }
 .river-empty-placeholder { width: 100%; height: auto; aspect-ratio: 100 / 140; border-radius: 4px; border: 2px solid rgba(255, 255, 255, 0.05); box-sizing: border-box; max-width: 95px; margin: 0 auto; }
@@ -179,7 +190,7 @@ button:disabled { background-color: #888; color: #bbb; cursor: not-allowed; opac
 #round-over-scoreboard th, #game-over-scoreboard th { background-color: var(--teak-light); color: var(--light-text); }
 #round-over-scoreboard tr:nth-child(even), #game-over-scoreboard tr:nth-child(even) { background-color: rgba(0,0,0,0.05); }
 #round-over-scoreboard .score-col, #game-over-scoreboard .score-col { text-align: right; font-weight: bold; }
-.final-hands-header { margin-top: 20px; margin-bottom: 10px; color: var(--teak-dark); }
+.final-hands-header { margin-top: 20px; margin-bottom: 10px; color: var(--dark-text); }
 #round-over-hands .player-hand-display { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px dashed var(--teak-light); }
 #round-over-hands .player-hand-display:last-child { border-bottom: none; }
 #round-over-hands .player-hand-name { font-weight: bold; margin-bottom: 5px; }
