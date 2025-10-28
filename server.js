@@ -98,7 +98,7 @@ function checkValidMoveFungible(card, boardState, hand, isFirstMove) {
         // Start card is always 7-Hearts-c1
         return card.id === '7-Hearts-c1';
     }
-    
+
     const suitLayout = boardState[card.suit];
     const cardRankVal = RANK_ORDER[card.rank];
 
@@ -204,7 +204,7 @@ function handleFungibleCardPlay(cardToPlay) {
                 placed = true;
             }
         }
-        
+
         // --- Priority Check: Row 2 (only if not placed on row 1) ---
         if (!placed && layout.row2) {
              if (rankVal === layout.row2.high + 1) {
@@ -266,6 +266,7 @@ function initializeGame(readyPlayers, settings) {
         currentDealerIndex: -1,
         dealerId: null,
         isBetweenRounds: false,
+        isEnding: false, // Flag to prevent pause during game end
     };
 
     io.emit('gameStarted');
@@ -310,7 +311,7 @@ function startNewRound() {
 
     let firstPlayerId = null;
     let firstPlayerName = null;
-    
+
     // *** MODIFIED: Find correct start card based on gameMode ***
     const startCardId = gameState.settings.gameMode === 'fungible' ? '7-Hearts-c1' : '7-Hearts-0';
     for (const player of gameState.players) {
@@ -394,6 +395,10 @@ function endSession(wasGameAborted = false) {
         hardReset();
         return;
     }
+
+    // --- *** MODIFICATION: Set isEnding flag *** ---
+    gameState.isEnding = true;
+    // --- *** END MODIFICATION *** ---
 
     addLog('The game session is ending...');
 
@@ -637,6 +642,7 @@ io.on('connection', (socket) => {
                 playerToRejoin = gameState.players.find(p => p.playerId === playerId && p.status === 'Disconnected');
             }
             if (!playerToRejoin && playerName) {
+                // Use case-insensitive matching for name rejoin
                 playerToRejoin = gameState.players.find(p => p.name.toLowerCase() === playerName.toLowerCase() && p.status === 'Disconnected');
             }
 
@@ -665,7 +671,7 @@ io.on('connection', (socket) => {
         } else {
             // --- Lobby Logic ---
             let existingPlayer = null;
-            
+
              let nameExists = players.some(p => p.name.toLowerCase() === playerName.toLowerCase());
              if (nameExists) {
                 socket.emit('joinFailed', `Name "${playerName}" is already taken.`);
@@ -733,7 +739,7 @@ io.on('connection', (socket) => {
         if (gameMode === 'fungible' || gameMode === '2') {
              minPlayers = 3; // Keep min 3, but can support more
         }
-        
+
         if (readyPlayers.length < minPlayers) {
             socket.emit('warning', `You need at least ${minPlayers} ready players to start.`);
             return;
@@ -925,6 +931,19 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
         if (gameState) {
+            // --- *** MODIFICATION: Check if game is ending/between rounds *** ---
+            if (gameState.isEnding || gameState.isBetweenRounds) {
+                const playerInGame = gameState.players.find(p => p.socketId === socket.id);
+                if (playerInGame) {
+                    addLog(`Player ${playerInGame.name} disconnected during game end/round transition.`);
+                    // Optionally mark as disconnected but DO NOT pause
+                    // playerInGame.status = 'Disconnected';
+                    // io.emit('updateGameState', gameState);
+                }
+                return; // Skip pause logic
+            }
+            // --- *** END MODIFICATION ***
+
             const playerInGame = gameState.players.find(p => p.socketId === socket.id && p.status === 'Active');
             if (playerInGame) {
                 playerInGame.status = 'Disconnected';
