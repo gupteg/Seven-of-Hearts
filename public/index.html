@@ -20,6 +20,10 @@
         <h3>Players:</h3>
         <ul id="player-list"></ul>
 
+        <div id="claim-host-section" class="lobby-actions" style="display: none;">
+            <input type="password" id="claim-host-password-input" placeholder="Host Password (Optional)">
+            <button id="claim-host-btn">Become Host</button>
+        </div>
         <div id="player-lobby-actions" class="lobby-actions">
             <button id="ready-btn">Ready</button>
         </div>
@@ -42,7 +46,6 @@
                 </div>
             </div>
             <div id="host-controls">
-                <input type="password" id="host-password-input" placeholder="Host Password">
                 <button id="start-game-btn">Start Game</button>
                 <button id="hard-reset-btn" class="danger-btn">Hard Reset</button>
             </div>

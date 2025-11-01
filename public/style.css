@@ -71,10 +71,36 @@ body {
     border-radius: 10px;
     box-shadow: 0 0 15px rgba(0,0,0,0.5);
 }
-#player-name-input, #host-password-input { font-size: 1.1em; padding: 10px; border-radius: 5px; border: 2px solid var(--teak-dark); width: 80%; }
+#player-name-input, #host-password-input, #claim-host-password-input { /* Modified */
+    font-size: 1.1em;
+    padding: 10px;
+    border-radius: 5px;
+    border: 2px solid var(--teak-dark);
+    width: 80%;
+    box-sizing: border-box; /* Added */
+}
 #player-list { list-style: none; padding: 0; }
 #player-list li { padding: 10px; border-bottom: 1px solid var(--teak-dark); text-align: left; display: flex; justify-content: space-between; align-items: center; }
 .kick-btn { font-size: 0.8em; padding: 3px 7px; }
+
+/* *** NEW: Claim Host Section Style *** */
+#claim-host-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Center items */
+    gap: 10px; /* Space between input and button */
+    margin: 20px 0;
+}
+#claim-host-password-input {
+    width: 100%; /* Match existing inputs */
+    max-width: 400px;
+}
+#claim-host-btn {
+    width: 100%; /* Make button full width */
+    max-width: 400px;
+}
+/* *** END NEW STYLE *** */
+
 
 /* Lobby Settings */
 .game-settings { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 5px; margin: 15px 0; text-align: left; }
