@@ -15,6 +15,8 @@ let gameState = null; // Active game state
 const reconnectTimers = {};
 const DISCONNECT_GRACE_PERIOD = 60000;
 let gameOverCleanupTimer = null;
+// --- *** NEW: Host Password from .env *** ---
+const HOST_PASSWORD = process.env.HOST_PASSWORD || null;
 
 // --- Seven of Hearts Constants ---
 const SUITS = ['Hearts', 'Diamonds', 'Clubs', 'Spades'];
@@ -236,9 +238,11 @@ function initializeGame(readyPlayers, settings) {
         isBot: false,
     }));
 
-    const host = gamePlayers.find(p => p.isHost);
-    const otherPlayers = gamePlayers.filter(p => !p.isHost);
+    // --- *** MODIFIED: Host is now always index 0 *** ---
+    const host = gamePlayers[0]; // Host is guaranteed to be at index 0
+    const otherPlayers = gamePlayers.slice(1); // All other players
     const dealerOrder = [host.playerId, ...otherPlayers.map(p => p.playerId)];
+    // --- *** END MODIFICATION *** ---
 
     // *** MODIFIED: Store gameMode and deckCount separately ***
     const gameMode = settings.deckCount; // '1', '2', or 'fungible'
@@ -634,9 +638,10 @@ function hardReset() {
 io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id}`);
 
+    // --- *** MODIFIED: joinGame Handler *** ---
     socket.on('joinGame', ({ playerName, playerId }) => {
         if (gameState) {
-            // --- Reconnection Logic ---
+            // --- Reconnection Logic (Unchanged) ---
             let playerToRejoin = null;
             if (playerId) {
                 playerToRejoin = gameState.players.find(p => p.playerId === playerId && p.status === 'Disconnected');
@@ -669,7 +674,7 @@ io.on('connection', (socket) => {
                 socket.emit('joinFailed', 'Game in progress and you are not a disconnected player.');
             }
         } else {
-            // --- Lobby Logic ---
+            // --- MODIFIED: Lobby Logic (Hostless) ---
             let existingPlayer = null;
 
              let nameExists = players.some(p => p.name.toLowerCase() === playerName.toLowerCase());
@@ -678,21 +683,30 @@ io.on('connection', (socket) => {
                 return;
              }
 
-            existingPlayer = players.find(p => p.socketId === socket.id);
+            // Check for existing player by persistent ID
+            if (playerId) {
+                 existingPlayer = players.find(p => p.playerId === playerId);
+            }
+            
+            // Fallback: check for existing player by socket ID (e.g., page refresh)
+            if (!existingPlayer) {
+                existingPlayer = players.find(p => p.socketId === socket.id);
+            }
 
             if (existingPlayer) {
                 existingPlayer.name = playerName;
+                existingPlayer.socketId = socket.id; // Update socket ID
                 existingPlayer.active = true;
             } else {
+                const newPlayerId = playerId || `${socket.id}-${Date.now()}`;
                 const newPlayer = {
-                    playerId: `${socket.id}-${Date.now()}`,
+                    playerId: newPlayerId,
                     name: playerName,
                     socketId: socket.id,
-                    isHost: players.length === 0,
-                    isReady: false,
+                    isHost: false, // MODIFIED: No host on join
+                    isReady: false, // MODIFIED: Not ready on join
                     active: true
                 };
-                if (newPlayer.isHost) newPlayer.isReady = true;
                 players.push(newPlayer);
                 socket.emit('joinSuccess', newPlayer.playerId);
             }
@@ -700,10 +714,51 @@ io.on('connection', (socket) => {
             io.emit('lobbyUpdate', players);
         }
     });
+    // --- *** END MODIFIED: joinGame *** ---
+
+    // --- *** NEW: claimHost Handler *** ---
+    socket.on('claimHost', ({ password }) => {
+        // 1. Check if a host already exists
+        if (players.some(p => p.isHost)) {
+            return socket.emit('warning', { title: 'Error', message: 'A host has already been claimed.' });
+        }
+
+        // 2. Refined Password Check (uses HOST_PASSWORD from top of file)
+        if (HOST_PASSWORD !== null) {
+            // A password IS required
+            if (password !== HOST_PASSWORD) {
+                return socket.emit('warning', { title: 'Error', message: 'Incorrect host password.' });
+            }
+            // Password is correct, so proceed...
+        }
+        // If HOST_PASSWORD is null, we skip the check
+        // and the player automatically succeeds.
+
+        // 4. Promote the player
+        const newHost = players.find(p => p.socketId === socket.id);
+        if (!newHost) { return; } // Safety check
+
+        newHost.isHost = true;
+        newHost.isReady = true; // Host is always ready
+
+        // 5. Re-order the array
+        // Find the full player object first
+        const newHostPlayerObject = players.find(p => p.playerId === newHost.playerId);
+        // Remove newHost from their current position
+        players = players.filter(p => p.playerId !== newHost.playerId);
+
+        // Add them to the very front (index 0)
+        players.unshift(newHostPlayerObject);
+
+        // 6. Broadcast the new lobby state
+        io.emit('lobbyUpdate', players);
+    });
+    // --- *** END NEW HANDLER *** ---
+
 
     socket.on('setPlayerReady', (isReady) => {
         const player = players.find(p => p.socketId === socket.id);
-        if (player) {
+        if (player && !player.isHost) { // Host is always ready
             player.isReady = isReady;
             io.emit('lobbyUpdate', players);
         }
@@ -721,23 +776,21 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('startGame', ({ hostPassword, settings }) => {
+    // --- *** MODIFIED: startGame Handler *** ---
+    socket.on('startGame', ({ settings }) => { // hostPassword removed
         const requester = players.find(p => p.socketId === socket.id);
         if (!requester || !requester.isHost) return;
 
-        if (process.env.HOST_PASSWORD && hostPassword !== process.env.HOST_PASSWORD) {
-            socket.emit('warning', 'Invalid Host Password.');
-            return;
-        }
-
+        // Password check REMOVED
+        
         const readyPlayers = players.filter(p => p.isReady && p.active);
 
         // *** MODIFIED: Logic for deckCount setting ***
         // settings.deckCount is '1', '2', or 'fungible'
         const gameMode = settings.deckCount;
-        let minPlayers = 3;
+        let minPlayers = 2; // Default min players
         if (gameMode === 'fungible' || gameMode === '2') {
-             minPlayers = 3; // Keep min 3, but can support more
+             minPlayers = 2; // Can be 2
         }
 
         if (readyPlayers.length < minPlayers) {
@@ -748,6 +801,7 @@ io.on('connection', (socket) => {
 
         initializeGame(readyPlayers, settings);
     });
+    // --- *** END MODIFIED: startGame *** ---
 
     // --- Seven of Hearts Game Events ---
     socket.on('playCard', (card) => {
@@ -928,6 +982,7 @@ io.on('connection', (socket) => {
          }
     });
 
+    // --- *** MODIFIED: disconnect Handler *** ---
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
         if (gameState) {
@@ -959,23 +1014,37 @@ io.on('connection', (socket) => {
                 io.emit('updateGameState', gameState);
             }
         } else {
-            const disconnectedPlayerIndex = players.findIndex(p => p.socketId === socket.id);
-            if (disconnectedPlayerIndex !== -1) {
-                 const disconnectedPlayer = players[disconnectedPlayerIndex];
+            // --- MODIFIED: Lobby Disconnect Logic ---
+            const disconnectedPlayer = players.find(p => p.socketId === socket.id);
+            if (disconnectedPlayer) {
                  console.log(`Player ${disconnectedPlayer.name} left lobby.`);
                  const wasHost = disconnectedPlayer.isHost;
-                 players.splice(disconnectedPlayerIndex, 1);
+                 // Mark as inactive instead of removing, to preserve persistent ID if they rejoin
+                 disconnectedPlayer.active = false; 
 
-                 if (wasHost && players.length > 0) {
-                     players[0].isHost = true;
-                     players[0].isReady = true;
-                     console.log(`New host is ${players[0].name}`);
+                 if (wasHost) {
+                     // Host left. Make lobby hostless and force all players to be "not ready"
+                     disconnectedPlayer.isHost = false; // Revoke host
+                     players.forEach(p => {
+                         p.isReady = false; // All players must re-ready
+                     });
+                     console.log(`Host ${disconnectedPlayer.name} disconnected. Lobby is now hostless.`);
                  }
+
+                 // Clean up lobby if all players are inactive
+                 if (!players.some(p => p.active)) {
+                     players = [];
+                     console.log("All players inactive. Clearing lobby.");
+                 }
+                 
                  io.emit('lobbyUpdate', players);
             }
+            // --- END MODIFIED: Lobby Disconnect ---
         }
     });
 });
+// --- *** END MODIFIED: disconnect *** ---
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
